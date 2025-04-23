@@ -372,8 +372,8 @@ class OrderController extends Controller
                 // Store in a temporary property or a new array
                 $couponData = [];
                 foreach ($coupons as $coupon) {
-                    $couponData[$coupon->code] = [
-                        'code' => $coupon->code,
+                    $couponData[strtolower($coupon->code)] = [
+                        'code' => strtolower($coupon->code),
                         'value' => $coupon->value,
                         'start_date' => $coupon->start_date,
                         'end_date' => $coupon->end_date,
@@ -421,10 +421,10 @@ class OrderController extends Controller
                         'product_subcategory' => isset($product['subcategory_name']) ? $product['subcategory_name'] : '',
                         'vat' => $request->input('vatTax'),
                     ];
-                } elseif(!is_null($exisProduct->coupon) && !empty($exisProduct->coupon) && isset($exisProduct->coupon) && isset($exisProduct->coupon[$request->input('couponCode')]) && $exisProduct->coupon[$request->input('couponCode')]['code'] == $request->input('couponCode')) {
+                } elseif(!is_null($exisProduct->coupon) && !empty($exisProduct->coupon) && isset($exisProduct->coupon) && isset($exisProduct->coupon[strtolower($request->input('couponCode'))]) && $exisProduct->coupon[strtolower($request->input('couponCode'))]['code'] == strtolower($request->input('couponCode'))) {
                     $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
                     $total_amount = $price * $quantity;
-                    $discount_percent = $exisProduct->coupon[$request->input('couponCode')]['value'];
+                    $discount_percent = $exisProduct->coupon[strtolower($request->input('couponCode'))]['value'];
                     $discount_amount = ($total_amount / 100) * $discount_percent;
                     $net_amount = $total_amount - $discount_amount;
                     $tax_amount = ($net_amount / 100) * $request->input('vatTax');
@@ -572,8 +572,8 @@ class OrderController extends Controller
                 // Store in a temporary property or a new array
                 $couponData = [];
                 foreach ($coupons as $coupon) {
-                    $couponData[$coupon->code] = [
-                        'code' => $coupon->code,
+                    $couponData[strtolower($coupon->code)] = [
+                        'code' => strtolower($coupon->code),
                         'value' => $coupon->value,
                         'start_date' => $coupon->start_date,
                         'end_date' => $coupon->end_date,
@@ -610,10 +610,10 @@ class OrderController extends Controller
                         'amount' => $gross_amount,
                         'options' => json_encode($options),
                     ];
-                } elseif(!is_null($exisProduct->coupon) && !empty($exisProduct->coupon) && isset($exisProduct->coupon) && isset($exisProduct->coupon[$request->input('couponCode')]) && $exisProduct->coupon[$request->input('couponCode')]['code'] == $request->input('couponCode')) {
+                } elseif(!is_null($exisProduct->coupon) && !empty($exisProduct->coupon) && isset($exisProduct->coupon) && isset($exisProduct->coupon[strtolower($request->input('couponCode'))]) && $exisProduct->coupon[strtolower($request->input('couponCode'))]['code'] == strtolower($request->input('couponCode'))) {
                     $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
                     $total_amount = $price * $quantity;
-                    $discount_percent = $exisProduct->coupon[$request->input('couponCode')]['value'];
+                    $discount_percent = $exisProduct->coupon[strtolower($request->input('couponCode'))]['value'];
                     $discount_amount = ($total_amount / 100) * $discount_percent;
                     $net_amount = $total_amount - $discount_amount;
                     $tax_amount = ($net_amount / 100) * $request->input('vatTax');
@@ -1145,12 +1145,15 @@ class OrderController extends Controller
         //     return response()->json(['message' => 'Verify Mobile Number First']);
         // }
 
-        $customer = Customer::where('phone', $request->input('mobile_number'))->first();
+        $order_address = OrderAddress::where('phone', $request->input('mobile_number'))->first();
 
-        if($customer) {
-            $customer_discount = DB::table('ec_customer_used_coupons')->where('customer_id', $customer->id)->where('discount_id', $coupon->id)->first();
-            if($customer_discount) {
-                return response()->json(['message' => 'You Have Already Used this Coupon Code']);
+        if($order_address) {
+            $order = Order::where('id', $order_address->order_id)->first();
+            if($order) {
+                $customer_discount = DB::table('ec_customer_used_coupons')->where('customer_id', $order->user_id)->where('discount_id', $coupon->id)->first();
+                if($customer_discount) {
+                    return response()->json(['message' => 'You Have Already Used this Coupon Code']);
+                }
             }
         }
 
