@@ -799,16 +799,16 @@ class OrderController extends Controller
         // array request
         $arrData = array(
             'command'            => 'PURCHASE',
-            // 'access_code'        => 'WFM9NH5byvZhvY8saSiS',
-            'access_code'        => 'qNkFjECwpNxo36jeMQPm',
-            // 'merchant_identifier'=> 'c5563f2d',
-            'merchant_identifier'=> 'tUPfHAHW',
+            'access_code'        => 'WFM9NH5byvZhvY8saSiS',
+            // 'access_code'        => 'qNkFjECwpNxo36jeMQPm',
+            'merchant_identifier'=> 'c5563f2d',
+            // 'merchant_identifier'=> 'tUPfHAHW',
             'merchant_reference' => explode('#', $order->code)[1],
             'amount'             => $request->input('finalPrice') * 100,
             'currency'           => 'SAR',
             'language'           => 'en',
             'order_description'  => $paymentStr,
-            'return_url'         => 'http://localhost/ahmed-admin-ksa/public/api/payFortPaymentRedirect?email='.base64_encode($request->input('billingAddress.email')),
+            'return_url'         => 'http://localhost/ahmed-admin-ksa/public/api/payFortPaymentRedirect?order_number='.base64_encode($order->code),
             "customer_name"=> $request->input('billingAddress.first_name').' '.$request->input('billingAddress.last_name'),
             'customer_email'     => $request->input('billingAddress.email'),
             "phone_number"=> $request->input('billingAddress.mobile'),
@@ -827,23 +827,23 @@ class OrderController extends Controller
             $shaString .= "$key=$value";
         }
         // make sure to fill your sha request pass phrase
-        // $shaString = "02zOYQShW56enOiLUkdHnx-&" . $shaString . "02zOYQShW56enOiLUkdHnx-&";
-        $shaString = "742vW6dVadHHAxMO45VESS*{". $shaString . '742vW6dVadHHAxMO45VESS*{';
+        $shaString = "02zOYQShW56enOiLUkdHnx-&" . $shaString . "02zOYQShW56enOiLUkdHnx-&";
+        // $shaString = "742vW6dVadHHAxMO45VESS*{". $shaString . '742vW6dVadHHAxMO45VESS*{';
         $signature = hash("sha256", $shaString);
         // your request signature
         // echo $signature;
         $requestParams = array(
             'command'            => 'PURCHASE',
-            // 'access_code'        => 'WFM9NH5byvZhvY8saSiS',
-            'access_code'        => 'qNkFjECwpNxo36jeMQPm',
-            // 'merchant_identifier'=> 'c5563f2d',
-            'merchant_identifier'=> 'tUPfHAHW',
+            'access_code'        => 'WFM9NH5byvZhvY8saSiS',
+            // 'access_code'        => 'qNkFjECwpNxo36jeMQPm',
+            'merchant_identifier'=> 'c5563f2d',
+            // 'merchant_identifier'=> 'tUPfHAHW',
             'merchant_reference' => explode('#', $order->code)[1],
             'amount'             => $request->input('finalPrice') * 100,
             'currency'           => 'SAR',
             'language'           => 'en',
             'order_description'  => $paymentStr,
-            'return_url'         => 'http://localhost/ahmed-admin-ksa/public/api/payFortPaymentRedirect?email='.base64_encode($request->input('billingAddress.email')),
+            'return_url'         => 'http://localhost/ahmed-admin-ksa/public/api/payFortPaymentRedirect?order_number='.base64_encode($order->code),
             "customer_name"=> $request->input('billingAddress.first_name').' '.$request->input('billingAddress.last_name'),
             'customer_email'     => $request->input('billingAddress.email'),
             "phone_number"=> $request->input('billingAddress.mobile'),
@@ -859,22 +859,23 @@ class OrderController extends Controller
         );
 
 
-        // $redirectUrl = 'https://sbcheckout.payfort.com/FortAPI/paymentPage';
-        $redirectUrl = 'https://checkout.payfort.com/FortAPI/paymentPage';
+        $redirectUrl = 'https://sbcheckout.payfort.com/FortAPI/paymentPage';
+        // $redirectUrl = 'https://checkout.payfort.com/FortAPI/paymentPage';
         return response(['redirectUrl' => $redirectUrl, 'requestParams' => $requestParams]);
     }
 
     public function payFortPaymentRedirect(Request $request, CreatePaymentForOrderService $createPaymentForOrderService) {
         // echo "<pre>";print_r($request->all());
         // $request->query('email');die;
-        $customer = Customer::where('email', base64_decode($request->query('email')))->first();
-        $order = Order::where('user_id', $customer->id)->orderBy('id', 'desc')->first();
+        // $customer = Customer::where('email', base64_decode($request->query('email')))->first();
+        // $order = Order::where('user_id', $customer->id)->orderBy('id', 'desc')->first();
+        $order = Order::where('code', base64_decode($request->query('order_number')))->orderBy('id', 'desc')->first();
         // echo "<pre>";print_r($order);
         $createPaymentForOrderService->execute(
             $order,
             'payfort',
             $request['response_message'],
-            $customer->id,
+            $order->user_id,
             $request->input('fort_id'),
             $request['response_message'],
         );
@@ -914,9 +915,9 @@ class OrderController extends Controller
             "lang" => "en",
             "merchant_code" => "assaaste",
             "merchant_urls" => [
-                "success" => "http://localhost/ahmed-admin-ksa/public/api/tabbyPaymentRedirect?email=".base64_encode($request->input('billingAddress.email')),
-                "cancel" => "http://localhost/ahmed-admin-ksa/public/api/tabbyPaymentRedirect?email=".base64_encode($request->input('billingAddress.email')),
-                "failure" => "http://localhost/ahmed-admin-ksa/public/api/tabbyPaymentRedirect?email=".base64_encode($request->input('billingAddress.email'))
+                "success" => "http://localhost/ahmed-admin-ksa/public/api/tabbyPaymentRedirect?order_number=".base64_encode($order->code),
+                "cancel" => "http://localhost/ahmed-admin-ksa/public/api/tabbyPaymentRedirect?order_number=".base64_encode($order->code),
+                "failure" => "http://localhost/ahmed-admin-ksa/public/api/tabbyPaymentRedirect?order_number=".base64_encode($order->code)
             ]
         ];
 
@@ -1002,8 +1003,9 @@ class OrderController extends Controller
         // echo "<pre>";print_r($request->all());die;
         // $request->query('email');die;
         $payment_id = $request->input('payment_id') ? $request->input('payment_id') : $request->query('payment_id');
-        $customer = Customer::where('email', base64_decode($request->query('email')))->first();
-        $order = Order::where('user_id', $customer->id)->orderBy('id', 'desc')->first();
+        // $customer = Customer::where('email', base64_decode($request->query('email')))->first();
+        // $order = Order::where('user_id', $customer->id)->orderBy('id', 'desc')->first();
+        $order = Order::where('code', base64_decode($request->query('order_number')))->orderBy('id', 'desc')->first();
         // echo "<pre>";print_r($order);
         $BASE_URL = 'https://api.tabby.ai/api/v2/payments/';
         // $SERVER_KEY = 'sk_019228fd-8e52-3ecd-f813-bf1111408314';
@@ -1059,7 +1061,7 @@ class OrderController extends Controller
                 $order,
                 'tabby',
                 $resp['status'],
-                $customer->id,
+                $order->user_id,
                 $request->input('payment_id'),
                 (isset($resp['description']) && !empty($resp['description'])) ? $resp['description'] : $resp['status'],
             );
@@ -1068,7 +1070,7 @@ class OrderController extends Controller
                 $order,
                 'tabby',
                 $response['status'],
-                $customer->id,
+                $order->user_id,
                 $request->input('payment_id'),
                 (isset($response['description']) && !empty($response['description'])) ? $response['description'] : $response['status'],
             );
