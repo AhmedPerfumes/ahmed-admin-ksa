@@ -84,6 +84,8 @@ class CreatePaymentForOrderService
 
         $order_products = OrderProduct::where('order_id', $order->getKey())->get();
 
+        // echo "<pre>";print_r($order_products);die;
+
         if($paymentStat == 'completed' || $paymentMethod == 'cod') {
             // $ch = curl_init();
 
@@ -207,7 +209,7 @@ class CreatePaymentForOrderService
                                                                                                                                     <div style="font-family:Helvetica Neue,Helvetica,Roboto,Arial,sans-serif;text-align:left;">'.$value->qty.'</div>
                                                                                                                                 </td>
                                                                                                                                 <td style="color:#636363;text-align:left;vertical-align:middle;padding:12px;border:1px solid #E5E5E5;">
-                                                                                                                                    <div style="font-family:Helvetica Neue,Helvetica,Roboto,Arial,sans-serif;text-align:left;">&#x631;&#x2E;&#x633;'.round((($value->price * 1.15) - ((($value->price * 1.15) / 100) * $value->discount_percent) * $value->qty), 2).'</div>
+                                                                                                                                    <div style="font-family:Helvetica Neue,Helvetica,Roboto,Arial,sans-serif;text-align:left;">&#x631;&#x2E;&#x633;'.round((($value->price * 1.15) - ((($value->price * 1.15) / 100) * $value->discount_percent)) * $value->qty, 2).'</div>
                                                                                                                                 </td>
                                                                                                                             </tr>';   
                                                                                                                         }
@@ -219,7 +221,7 @@ class CreatePaymentForOrderService
                                                                                                                             <td style="color:#636363;text-align:left;vertical-align:middle;padding:12px;border:1px solid #E5E5E5;">
                                                                                                                                 <div style="font-family:Helvetica Neue,Helvetica,Roboto,Arial,sans-serif;text-align:left;">'.$value->qty.'</div>
                                                                                                                             </td>
-                                                                                                                            <td style="color:#636363;text-align:left;vertical-align:middle;padding:12px;border:1px solid #E5E5E5;">
+                                                                                                                            <td style="color:#636363;text-align:left;vertical-align:middle;padding:12px;border:1px solid #E5E5E5;">SALES
                                                                                                                                 <div style="font-family:Helvetica Neue,Helvetica,Roboto,Arial,sans-serif;text-align:left;">&#x631;&#x2E;&#x633;'.round((($value->price * 1.15) - ((($value->price * 1.15) / 100) * $value->sale_price) * $value->qty), 2).'</div>
                                                                                                                             </td>
                                                                                                                         </tr>';
@@ -231,7 +233,7 @@ class CreatePaymentForOrderService
                                                                                                                         <td style="color:#636363;text-align:left;vertical-align:middle;padding:12px;border:1px solid #E5E5E5;">
                                                                                                                             <div style="font-family:Helvetica Neue,Helvetica,Roboto,Arial,sans-serif;text-align:left;">'.$value->qty.'</div>
                                                                                                                         </td>
-                                                                                                                        <td style="color:#636363;text-align:left;vertical-align:middle;padding:12px;border:1px solid #E5E5E5;">
+                                                                                                                        <td style="color:#636363;text-align:left;vertical-align:middle;padding:12px;border:1px solid #E5E5E5;">ELSE
                                                                                                                             <div style="font-family:Helvetica Neue,Helvetica,Roboto,Arial,sans-serif;text-align:left;">&#x631;&#x2E;&#x633;'.round((($value->price * 1.15) * $value->qty), 2).'</div>
                                                                                                                         </td>
                                                                                                                         </tr>';
@@ -361,6 +363,8 @@ class CreatePaymentForOrderService
                     </tr>
                 </tbody>
             </table>';
+
+            // echo "<pre>";print_r($body);die;
 
             $mail->Body   = $body;
 
