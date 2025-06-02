@@ -191,6 +191,12 @@ class OrderController extends Controller
         //     'status' => OrderStatusEnum::PROCESSING,
         //     'order_lang' => $request->input('locale'),
         // ]);die();
+        foreach ($request->input('products') as $product) {
+            if(isset($product['is_gift']) && $product['is_gift'] == true) {
+                $gift_product = Product::where('ec_products.id', $product['product_id'])->first();
+                $without_vat_price = $gift_product->price / (1 + ($request->input('vatTax') / 100));
+            }
+        }
         $order = Order::create([
             'user_id' => $customer_id,
             'shipping_method' => $request->input('shipping_method') ? : ShippingMethodEnum::DEFAULT,
@@ -212,6 +218,11 @@ class OrderController extends Controller
             'is_finished' => 1,
             'status' => OrderStatusEnum::PROCESSING,
             'lang' => $request->input('locale'),
+            'sub_total_tax' => isset($without_vat_price) ? ($request->input('totalPrice') / (1 + ($request->input('vatTax') / 100)) * ($request->input('vatTax') / 100)) + ($request->input('shippingPrice') / (1 + ($request->input('vatTax') / 100)) * ($request->input('vatTax') / 100)) + ($request->input('servicePrice') / (1 + ($request->input('vatTax') / 100)) * ($request->input('vatTax') / 100)) + (($without_vat_price / 100) * $request->input('vatTax')) : 0.00,
+            'discount_sub_total' => isset($without_vat_price) ? $without_vat_price : 0.00,
+            'discount_sub_total_tax' => isset($without_vat_price) ? (($without_vat_price / 100) * $request->input('vatTax')) : 0.00,
+            'discount' => isset($without_vat_price) ? $without_vat_price + (($without_vat_price / 100) * $request->input('vatTax')) : 0.00,
+            'campaign' => isset($gift_product) ? 'free_gift_eid_2025_campaign' : null,
         ]);
 
         // echo "<pre>";print_r($order);die();
@@ -493,12 +504,12 @@ class OrderController extends Controller
                     ];
                 } elseif(isset($product['is_gift']) && $product['is_gift'] == true) {
                     $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
-                    $total_amount = 0.00;
-                    $discount_percent = 100;
-                    $discount_amount = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
-                    $net_amount = 0.00;
-                    $tax_amount = 0.00;
-                    $gross_amount = 0.00;
+                    $total_amount = $price * $quantity;
+                    $discount_percent = 0;
+                    $discount_amount = 0.00;
+                    $net_amount = $total_amount;
+                    $tax_amount = ($net_amount / 100) * $request->input('vatTax');
+                    $gross_amount = $net_amount + $tax_amount;
                     $options = array('name' => $exisProduct->name, 'image' => $exisProduct->image, 'attributes' => ' ', 'taxRate' => $exisProduct->percentage, 'options' => [], 'extras' => [], 'sku' => $exisProduct->sku, 'weight' => $exisProduct->weight, 'original_price' => $exisProduct->price, 'product_type' => $exisProduct->product_type);
                 
                     $orderProduct = [
@@ -732,12 +743,12 @@ class OrderController extends Controller
                     ];
                 } elseif(isset($product['is_gift']) && $product['is_gift'] == true) {
                     $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
-                    $total_amount = 0.00;
-                    $discount_percent = 100;
-                    $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
-                    $net_amount = 0.00;
-                    $tax_amount = 0.00;
-                    $gross_amount = 0.00;
+                    $total_amount = $price * $quantity;
+                    $discount_percent = 0;
+                    $discount_amount = 0.00;
+                    $net_amount = $total_amount;
+                    $tax_amount = ($net_amount / 100) * $request->input('vatTax');
+                    $gross_amount = $net_amount + $tax_amount;
                     $options = array('name' => $exisProduct->name, 'image' => $exisProduct->image, 'attributes' => ' ', 'taxRate' => $exisProduct->percentage, 'options' => [], 'extras' => [], 'sku' => $exisProduct->sku, 'weight' => $exisProduct->weight, 'original_price' => $exisProduct->price, 'product_type' => $exisProduct->product_type);
                 
                     $orderProduct = [
