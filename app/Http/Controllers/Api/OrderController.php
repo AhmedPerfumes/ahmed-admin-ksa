@@ -41,7 +41,7 @@ class OrderController extends Controller
 
         foreach ($request->input('products') as $product) {
             $exisProduct = Product::where('id', $product['product_id'])->first();
-            if($exisProduct->quantity <= 0) {
+            if($exisProduct->quantity < $product['quantity']) {
                 return response()->json([
                     'qtyMessage'          => $product['product_name'].' is Out Of Stock.'
                 ]);
@@ -191,12 +191,12 @@ class OrderController extends Controller
         //     'status' => OrderStatusEnum::PROCESSING,
         //     'order_lang' => $request->input('locale'),
         // ]);die();
-        foreach ($request->input('products') as $product) {
-            if(isset($product['is_gift']) && $product['is_gift'] == true) {
-                $gift_product = Product::where('ec_products.id', $product['product_id'])->first();
-                $without_vat_price = $gift_product->price / (1 + ($request->input('vatTax') / 100));
-            }
-        }
+        // foreach ($request->input('products') as $product) {
+        //     if(isset($product['is_gift']) && $product['is_gift'] == true) {
+        //         $gift_product = Product::where('ec_products.id', $product['product_id'])->first();
+        //         $without_vat_price = $gift_product->price / (1 + ($request->input('vatTax') / 100));
+        //     }
+        // }
         $order = Order::create([
             'user_id' => $customer_id,
             'shipping_method' => $request->input('shipping_method') ? : ShippingMethodEnum::DEFAULT,
@@ -401,9 +401,9 @@ class OrderController extends Controller
 
                 // print_r($exisProduct);
 
-                if((isset($product['is_gift']) && $product['is_gift'] == true)) {
-                    $exisProduct->is_gift = 1;
-                }
+                // if((isset($product['is_gift']) && $product['is_gift'] == true)) {
+                //     $exisProduct->is_gift = 1;
+                // }
 
                 array_push($prod, $exisProduct);
 
@@ -502,40 +502,42 @@ class OrderController extends Controller
                         'product_subcategory' => isset($product['subcategory_name']) ? $product['subcategory_name'] : '',
                         'vat' => $request->input('vatTax'),
                     ];
-                } elseif(isset($product['is_gift']) && $product['is_gift'] == true) {
-                    $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
-                    $total_amount = $price * $quantity;
-                    $discount_percent = 0;
-                    $discount_amount = 0.00;
-                    $net_amount = $total_amount;
-                    $tax_amount = ($net_amount / 100) * $request->input('vatTax');
-                    $gross_amount = $net_amount + $tax_amount;
-                    $options = array('name' => $exisProduct->name, 'image' => $exisProduct->image, 'attributes' => ' ', 'taxRate' => $exisProduct->percentage, 'options' => [], 'extras' => [], 'sku' => $exisProduct->sku, 'weight' => $exisProduct->weight, 'original_price' => $exisProduct->price, 'product_type' => $exisProduct->product_type);
+                }
+                // elseif(isset($product['is_gift']) && $product['is_gift'] == true) {
+                //     $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
+                //     $total_amount = $price * $quantity;
+                //     $discount_percent = 0;
+                //     $discount_amount = 0.00;
+                //     $net_amount = $total_amount;
+                //     $tax_amount = ($net_amount / 100) * $request->input('vatTax');
+                //     $gross_amount = $net_amount + $tax_amount;
+                //     $options = array('name' => $exisProduct->name, 'image' => $exisProduct->image, 'attributes' => ' ', 'taxRate' => $exisProduct->percentage, 'options' => [], 'extras' => [], 'sku' => $exisProduct->sku, 'weight' => $exisProduct->weight, 'original_price' => $exisProduct->price, 'product_type' => $exisProduct->product_type);
                 
-                    $orderProduct = [
-                        'order_id' => $order->id,
-                        'product_id' => $product['product_id'],
-                        'product_name' => $exisProduct->name,
-                        'product_image' => $exisProduct->image,
-                        'qty' => $quantity,
-                        'weight' => $exisProduct->weight,
-                        'price' => $price,
-                        'total_amount' => $total_amount,
-                        'discount_percent' => $discount_percent,
-                        'discount_amount' => $discount_amount,
-                        'net_amount' => $net_amount,
-                        'tax_amount' => $tax_amount,
-                        'gross_amount' => $gross_amount,
-                        'product_options' => [],
-                        'options' => json_encode($options),
-                        'product_type' => $exisProduct->product_type,
-                        'product_category' => '',
-                        'product_subcategory' => '',
-                        'vat' => $request->input('vatTax'),
-                        'is_gift' => 1,
-                        'campaign' => 'free_gift_eid_2025_campaign',
-                    ];
-                } else {
+                //     $orderProduct = [
+                //         'order_id' => $order->id,
+                //         'product_id' => $product['product_id'],
+                //         'product_name' => $exisProduct->name,
+                //         'product_image' => $exisProduct->image,
+                //         'qty' => $quantity,
+                //         'weight' => $exisProduct->weight,
+                //         'price' => $price,
+                //         'total_amount' => $total_amount,
+                //         'discount_percent' => $discount_percent,
+                //         'discount_amount' => $discount_amount,
+                //         'net_amount' => $net_amount,
+                //         'tax_amount' => $tax_amount,
+                //         'gross_amount' => $gross_amount,
+                //         'product_options' => [],
+                //         'options' => json_encode($options),
+                //         'product_type' => $exisProduct->product_type,
+                //         'product_category' => '',
+                //         'product_subcategory' => '',
+                //         'vat' => $request->input('vatTax'),
+                //         'is_gift' => 1,
+                //         'campaign' => 'free_gift_eid_2025_campaign',
+                //     ];
+                // }
+                else {
                     $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
                     $total_amount = $price * $quantity;
                     $discount_percent = 0;
@@ -741,35 +743,37 @@ class OrderController extends Controller
                         'amount' => $gross_amount,
                         'options' => json_encode($options),
                     ];
-                } elseif(isset($product['is_gift']) && $product['is_gift'] == true) {
-                    $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
-                    $total_amount = $price * $quantity;
-                    $discount_percent = 0;
-                    $discount_amount = 0.00;
-                    $net_amount = $total_amount;
-                    $tax_amount = ($net_amount / 100) * $request->input('vatTax');
-                    $gross_amount = $net_amount + $tax_amount;
-                    $options = array('name' => $exisProduct->name, 'image' => $exisProduct->image, 'attributes' => ' ', 'taxRate' => $exisProduct->percentage, 'options' => [], 'extras' => [], 'sku' => $exisProduct->sku, 'weight' => $exisProduct->weight, 'original_price' => $exisProduct->price, 'product_type' => $exisProduct->product_type);
+                }
+                // elseif(isset($product['is_gift']) && $product['is_gift'] == true) {
+                //     $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
+                //     $total_amount = $price * $quantity;
+                //     $discount_percent = 0;
+                //     $discount_amount = 0.00;
+                //     $net_amount = $total_amount;
+                //     $tax_amount = ($net_amount / 100) * $request->input('vatTax');
+                //     $gross_amount = $net_amount + $tax_amount;
+                //     $options = array('name' => $exisProduct->name, 'image' => $exisProduct->image, 'attributes' => ' ', 'taxRate' => $exisProduct->percentage, 'options' => [], 'extras' => [], 'sku' => $exisProduct->sku, 'weight' => $exisProduct->weight, 'original_price' => $exisProduct->price, 'product_type' => $exisProduct->product_type);
                 
-                    $orderProduct = [
-                        'invoice_id' => $invoice->id,
-                        'reference_type' => 'Botble\Ecommerce\Models\Product',
-                        'reference_id' => $exisProduct->id,
-                        'name' => $exisProduct->name,
-                        'description' => $exisProduct->description,
-                        'image' => $exisProduct->image,
-                        'qty' => $quantity,
-                        'price' => $price,
-                        'sub_total' => $total_amount,
-                        'discount_percent' => $discount_percent,
-                        'discount_amount' => $discount_amount,
-                        'net_amount' => $net_amount,
-                        'tax_amount' => $tax_amount,
-                        'gross_amount' => $gross_amount,
-                        'amount' => $gross_amount,
-                        'options' => json_encode($options)
-                    ];
-                } else {
+                //     $orderProduct = [
+                //         'invoice_id' => $invoice->id,
+                //         'reference_type' => 'Botble\Ecommerce\Models\Product',
+                //         'reference_id' => $exisProduct->id,
+                //         'name' => $exisProduct->name,
+                //         'description' => $exisProduct->description,
+                //         'image' => $exisProduct->image,
+                //         'qty' => $quantity,
+                //         'price' => $price,
+                //         'sub_total' => $total_amount,
+                //         'discount_percent' => $discount_percent,
+                //         'discount_amount' => $discount_amount,
+                //         'net_amount' => $net_amount,
+                //         'tax_amount' => $tax_amount,
+                //         'gross_amount' => $gross_amount,
+                //         'amount' => $gross_amount,
+                //         'options' => json_encode($options)
+                //     ];
+                // }
+                else {
                     $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
                     $total_amount = $price * $quantity;
                     $discount_percent = 0;

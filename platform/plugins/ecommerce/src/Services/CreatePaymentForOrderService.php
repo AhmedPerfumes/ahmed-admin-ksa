@@ -213,6 +213,18 @@ class CreatePaymentForOrderService
                                                                                                                                 </td>
                                                                                                                             </tr>';   
                                                                                                                         }
+                                                                                                                    } else if($value->is_gift == 1) {
+                                                                                                                        $body .= '<tr>
+                                                                                                                            <td style="color:#636363;text-align:left;vertical-align:middle;padding:12px;border:1px solid #E5E5E5;">
+                                                                                                                                <div style="font-family:Helvetica Neue,Helvetica,Roboto,Arial,sans-serif;text-align:left;">'.$value->product_name.'</div>
+                                                                                                                            </td>
+                                                                                                                            <td style="color:#636363;text-align:left;vertical-align:middle;padding:12px;border:1px solid #E5E5E5;">
+                                                                                                                                <div style="font-family:Helvetica Neue,Helvetica,Roboto,Arial,sans-serif;text-align:left;">'.$value->qty.'</div>
+                                                                                                                            </td>
+                                                                                                                            <td style="color:#636363;text-align:left;vertical-align:middle;padding:12px;border:1px solid #E5E5E5;">
+                                                                                                                                <div style="font-family:Helvetica Neue,Helvetica,Roboto,Arial,sans-serif;text-align:left;">&#x631;&#x2E;&#x633; 0.00 (Free Gift)'.'</div>
+                                                                                                                            </td>
+                                                                                                                        </tr>';
                                                                                                                     } else if($value->sale_price != 0) {
                                                                                                                         $body .= '<tr>
                                                                                                                             <td style="color:#636363;text-align:left;vertical-align:middle;padding:12px;border:1px solid #E5E5E5;">
