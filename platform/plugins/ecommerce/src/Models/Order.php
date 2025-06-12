@@ -50,7 +50,13 @@ class Order extends BaseModel
         'shipping_amount_vat',
         'service_amount',
         'service_amount_vat',
-        'vat'
+        'vat',
+        'sub_total_tax',
+        'discount_sub_total',
+        'discount_sub_total_tax',
+        'discount',
+        'line_item_total',
+        'campaign'
     ];
 
     protected $casts = [
