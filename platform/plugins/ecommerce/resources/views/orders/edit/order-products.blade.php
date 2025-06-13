@@ -94,7 +94,7 @@
                     @endif
                 </x-core::table.body.cell>
                 <x-core::table.body.cell>
-                    {{ $orderProduct->discount_percent != 0 ? format_price($orderProduct->price) : format_price($orderProduct->price) }}
+                    {{ $orderProduct->is_gift != 1 ? format_price($orderProduct->net_amount) : format_price($orderProduct->price) }}
                 </x-core::table.body.cell>
                 <x-core::table.body.cell>
                     x
@@ -103,10 +103,10 @@
                     {{ $orderProduct->qty }}
                 </x-core::table.body.cell>
                 <x-core::table.body.cell>
-                    {{ format_price($orderProduct->net_amount) }}
+                    {{ $orderProduct->is_gift != 1 ? format_price($orderProduct->net_amount) : format_price($orderProduct->price) }}
                 </x-core::table.body.cell>
                 <x-core::table.body.cell>
-                    {{ format_price($orderProduct->tax_amount) }}
+                    {{ $orderProduct->is_gift != 1 ? format_price($orderProduct->tax_amount) : format_price($orderProduct->price / 100 * 15) }}
                 </x-core::table.body.cell>
             </x-core::table.body.row>
         @endforeach
