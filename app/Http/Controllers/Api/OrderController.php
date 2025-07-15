@@ -891,6 +891,8 @@ class OrderController extends Controller
                 'total'            => $order->amount,
                 'sub_total'        => $order->sub_total,
                 'shipping_amount'  => $order->shipping_amount,
+                'id'                => $order->id,
+                'customer_name'=>      $request->input('shippingAddress.first_name')?$request->input('shippingAddress.first_name').' '.$request->input('shippingAddress.last_name'):$request->input('billingAddress.first_name').' '.$request->input('billingAddress.last_name'),
                 'products'         => $prod
             ]);
         }
@@ -1235,7 +1237,7 @@ class OrderController extends Controller
             return response()->json($validator->errors());
         }
 
-        $order = Order::select('ec_orders.id', 'ec_orders.code', 'ec_orders.status', 'ec_orders.amount', 'ec_orders.sub_total', 'ec_orders.shipping_amount', 'payments.payment_channel', 'ec_orders.created_at', 'ec_orders.service_amount', 'ec_orders.vat', 'ec_orders.tax_amount', 'payments.status AS payment_status', 'payments.description AS payment_description', 'payments.payment_channel AS payment_channel')->join('ec_order_addresses', 'ec_order_addresses.order_id', 'ec_orders.id', 'left')->join('payments', 'payments.order_id', 'ec_orders.id', 'left')->where('ec_orders.code', $request->input('order_number'))->first();
+        $order = Order::select('ec_orders.id', 'ec_orders.code', 'ec_orders.status', 'ec_orders.amount', 'ec_orders.sub_total', 'ec_orders.shipping_amount', 'payments.payment_channel', 'ec_orders.created_at', 'ec_orders.service_amount', 'ec_orders.vat', 'ec_orders.tax_amount', 'payments.status AS payment_status', 'payments.description AS payment_description', 'payments.payment_channel AS payment_channel','ec_order_addresses.name')->join('ec_order_addresses', 'ec_order_addresses.order_id', 'ec_orders.id', 'left')->join('payments', 'payments.order_id', 'ec_orders.id', 'left')->where('ec_orders.code', $request->input('order_number'))->first();
 
         if(!$order) {
             return response()->json(['message' => 'Order not found']);
@@ -1253,6 +1255,8 @@ class OrderController extends Controller
             'status'           => $order->status,
             'created_at'       => $order->created_at,
             'service_amount'   => $order->service_amount,
+            'id'                =>   $order->id,
+            'customer_name'=> $order->name,
             'vat_amount'       => $order->vat,
             'tax_amount'       => $order->tax_amount,
             'payment_status'   => $order->payment_status,
