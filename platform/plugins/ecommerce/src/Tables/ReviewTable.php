@@ -47,15 +47,7 @@ class ReviewTable extends TableAbstract
         $data = $this->table
             ->eloquent($this->query())
             ->editColumn('product_id', function (Review $item) {
-                if (! empty($item->product) && $item->product->url) {
-                    return Html::link(
-                        $item->product->url,
-                        BaseHelper::clean($item->product_name),
-                        ['target' => '_blank']
-                    );
-                }
-
-                return null;
+                return 'Order #' . $item->product_id;
             })
             ->editColumn('customer_id', function (Review $item) {
                 if (! $item->user->id) {
@@ -63,7 +55,7 @@ class ReviewTable extends TableAbstract
                         return null;
                     }
 
-                    return sprintf('%s (%s)', BaseHelper::clean($item->customer_name), $item->customer_email);
+                    return sprintf('%s %s', BaseHelper::clean($item->customer_name), $item->customer_email);
                 }
 
                 return Html::link(

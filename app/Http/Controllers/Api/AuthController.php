@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Validator;
 use Botble\Ecommerce\Models\Customer;
 use Botble\Ecommerce\Models\MobileVerification;
 use Illuminate\Support\Facades\Auth;
+use Botble\Ecommerce\Models\Review;
 
 class AuthController extends Controller
 {
@@ -237,6 +238,24 @@ class AuthController extends Controller
 
         return response()->json([
             'message'          => 'OTP Sent on Above Mobile Number'
+        ]);
+    }
+    public function submitReview(Request $request)
+    {
+        
+        Review::create([
+            'product_id'     => $request?->order_id, // or set if needed
+            // 'customer_id'    => $request?->id,
+            'customer_name'  => $request?->customer_name ?? 'Guest',
+            // 'customer_email' => null,
+            'star'           => $request->star ?? 0,
+            'comment'        => $request->comment ?? '',
+            // 'status'         => 'published', // or 'pending' if needed
+        ]);
+    
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Review submitted successfully.',
         ]);
     }
 
