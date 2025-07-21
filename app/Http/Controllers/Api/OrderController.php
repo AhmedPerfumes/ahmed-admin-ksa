@@ -79,14 +79,44 @@ class OrderController extends Controller
             //     ]);
             // }
 
-            if(isset($product['discount']) && !is_null($product['discount'])) {
-                $exisProduct->discount = DiscountProduct::select('value', 'start_date', 'end_date')->where('product_id', $product['product_id'])->whereNull('code')->whereDate('start_date', '<=', now())->whereDate('end_date', '>=', now())->join('ec_discounts', 'ec_discounts.id', '=', 'ec_discount_products.discount_id', 'left')->first();
-                if(is_null($exisProduct->discount)) {
+            // if(isset($product['discount']) && !is_null($product['discount'])) {
+                $discountFromDb = DiscountProduct::select('value', 'start_date', 'end_date')->where('product_id', $product['product_id'])->whereNull('code')->whereDate('start_date', '<=', now())->whereDate('end_date', '>=', now())->join('ec_discounts', 'ec_discounts.id', '=', 'ec_discount_products.discount_id', 'left')->first();
+                $requestHasDiscount = !is_null($product['discount']);
+                $dbHasDiscount = !is_null($discountFromDb);
+
+                if ($requestHasDiscount && !$dbHasDiscount) {
+                    // Request says there should be a discount, but none found in DB
                     return response()->json([
-                        'discountMessage'          => 'One or more Products were removed. Please add them again to continue.'
+                        'discountMessage' => 'One or more Products were removed. Please add them again to continue.'
                     ]);
                 }
-            }
+
+                if (!$requestHasDiscount && $dbHasDiscount) {
+                    // Request says there should be no discount, but one exists in DB
+                    return response()->json([
+                        'discountMessage' => 'One or more Products were removed. Please add them again to continue.'
+                    ]);
+                }
+
+                // Optional: if you want to compare actual values of discount too
+                if ($requestHasDiscount && $dbHasDiscount) {
+                    $match =
+                        $product['discount']['value'] == $discountFromDb->value &&
+                        $product['discount']['start_date'] == $discountFromDb->start_date &&
+                        $product['discount']['end_date'] == $discountFromDb->end_date;
+
+                    if (!$match) {
+                        return response()->json([
+                            'discountMessage' => 'One or more Products were removed. Please add them again to continue.'
+                        ]);
+                    }
+                }
+
+                // All matched, assign discount
+                $exisProduct->discount = $discountFromDb;
+            // }
+
+            array_push($barcodes, $exisProduct->barcode);
         }
 
         $coupon_code = $request->input('couponCode');
@@ -104,8 +134,6 @@ class OrderController extends Controller
                     return response()->json(['couponMessage' => 'You Have Already Used this Coupon Code']);
                 }
             }
-
-            array_push($barcodes, $exisProduct->barcode);
         }
         // die('000');
         $customer_id = $request->input('customer_id');
@@ -945,18 +973,18 @@ class OrderController extends Controller
             'amount'             => $request->input('finalPrice') * 100,
             'currency'           => 'SAR',
             'language'           => 'en',
-            'order_description'  => $paymentStr,
+            // 'order_description'  => $paymentStr,
             'return_url'         => 'http://localhost/ahmed-admin-ksa/public/api/payFortPaymentRedirect?order_number='.base64_encode($order->code),
             "customer_name"=> $request->input('billingAddress.first_name').' '.$request->input('billingAddress.last_name'),
             'customer_email'     => $request->input('billingAddress.email'),
             "phone_number"=> $request->input('billingAddress.mobile'),
-            "billing_street"=> $request->input('billingAddress.area').' '.$request->input('billingAddress.building'),
-            "billing_city"=> $request->input('billingAddress.province'),
-            "billing_stateProvince"=> $request->input('billingAddress.province'),
+            "billing_street"=> 'KSA',
+            "billing_city"=> 'KSA',
+            "billing_stateProvince"=> 'KSA',
             "billing_country"=> "SAU",
-            "shipping_street"=> $shippingData['billing_street'],
-            "shipping_city"=> $shippingData['billing_city'],
-            "shipping_stateProvince"=> $shippingData['billing_stateProvince'],
+            "shipping_street"=> 'KSA',
+            "shipping_city"=> 'KSA',
+            "shipping_stateProvince"=> 'KSA',
             "shipping_country"=> "SAU",
         );
         // sort an array by key
@@ -980,18 +1008,18 @@ class OrderController extends Controller
             'amount'             => $request->input('finalPrice') * 100,
             'currency'           => 'SAR',
             'language'           => 'en',
-            'order_description'  => $paymentStr,
+            // 'order_description'  => $paymentStr,
             'return_url'         => 'http://localhost/ahmed-admin-ksa/public/api/payFortPaymentRedirect?order_number='.base64_encode($order->code),
             "customer_name"=> $request->input('billingAddress.first_name').' '.$request->input('billingAddress.last_name'),
             'customer_email'     => $request->input('billingAddress.email'),
             "phone_number"=> $request->input('billingAddress.mobile'),
-            "billing_street"=> $request->input('billingAddress.area').' '.$request->input('billingAddress.building'),
-            "billing_city"=> $request->input('billingAddress.province'),
-            "billing_stateProvince"=> $request->input('billingAddress.province'),
+             "billing_street"=> 'KSA',
+            "billing_city"=> 'KSA',
+            "billing_stateProvince"=> 'KSA',
             "billing_country"=> "SAU",
-            "shipping_street"=> $shippingData['billing_street'],
-            "shipping_city"=> $shippingData['billing_city'],
-            "shipping_stateProvince"=> $shippingData['billing_stateProvince'],
+            "shipping_street"=> 'KSA',
+            "shipping_city"=> 'KSA',
+            "shipping_stateProvince"=> 'KSA',
             "shipping_country"=> "SAU",
             "signature"=> $signature
         );
