@@ -1344,16 +1344,16 @@ class OrderController extends Controller
         //     return response()->json(['message' => 'Verify Mobile Number First']);
         // }
 
-        $order_address = OrderAddress::where('phone', $request->input('mobile_number'))->first();
+        $order_address = OrderAddress::join('payments', 'payments.order_id', '=', 'ec_order_addresses.order_id')->where('status', 'completed')->where('phone', $request->input('mobile_number'))->get();
 
-        if($order_address) {
-            $order = Order::where('id', $order_address->order_id)->first();
-            if($order) {
-                $customer_discount = DB::table('ec_customer_used_coupons')->where('customer_id', $order->user_id)->where('discount_id', $coupon->id)->first();
+        if(!$order_address->isEmpty()) {
+            // $order = Order::where('id', $order_address->order_id)->first();
+            // if($order) {
+                $customer_discount = DB::table('ec_customer_used_coupons')->where('customer_id', $order_address[0]->customer_id)->where('discount_id', $coupon->id)->first();
                 if($customer_discount) {
                     return response()->json(['message' => 'You Have Already Used this Coupon Code']);
                 }
-            }
+            // }
         }
 
         return response()->json([
