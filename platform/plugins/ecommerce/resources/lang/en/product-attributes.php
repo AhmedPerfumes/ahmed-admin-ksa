@@ -1,12 +1,12 @@
 <?php
 
 return [
-    'name' => 'Product attributes',
+    'name' => 'Top Header',
     'create' => 'New product attribute',
     'edit' => 'Edit product attribute',
     'intro' => [
-        'title' => 'Manage product attributes',
-        'description' => 'Product attribute such as color, width, height ...',
-        'button_text' => 'Create product attribute',
+        'title' => 'Manage Top Header ',
+        'description' => 'Add Top Header Text along with the link ',
+        'button_text' => 'Create Top Header ',
     ],
 ];
