@@ -43,6 +43,12 @@ class OrderController extends Controller
 
         foreach ($request->input('products') as $product) {
             $exisProduct = Product::where('id', $product['product_id'])->first();
+            if (!$exisProduct) {
+                return response()->json([
+                    'notFound' => 'Product not found '.$product['product_name']
+                ], 500);
+            }
+
             if($exisProduct->quantity < $product['quantity']) {
                 return response()->json([
                     'qtyMessage'          => $product['product_name'].' is Out Of Stock.'
@@ -532,6 +538,7 @@ class OrderController extends Controller
                         'product_category' => $product['category_name'],
                         'product_subcategory' => isset($product['subcategory_name']) ? $product['subcategory_name'] : '',
                         'vat' => $request->input('vatTax'),
+                        'campaign' => $request->input('couponCode'),
                     ];
                 } elseif(!is_null($exisProduct->sale_price)) {
                     $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
