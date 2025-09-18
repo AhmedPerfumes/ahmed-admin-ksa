@@ -43,6 +43,12 @@ class OrderController extends Controller
 
         foreach ($request->input('products') as $product) {
             $exisProduct = Product::where('id', $product['product_id'])->first();
+            if (!$exisProduct) {
+                return response()->json([
+                    'notFound' => 'Product not found '.$product['product_name']
+                ], 500);
+            }
+
             if($exisProduct->quantity < $product['quantity']) {
                 return response()->json([
                     'qtyMessage'          => $product['product_name'].' is Out Of Stock.'
@@ -125,11 +131,13 @@ class OrderController extends Controller
             if(!$coupon) {
                 return response()->json(['couponMessage' => 'Invalid Coupon Code']);
             }
-            $order_address = OrderAddress::where('phone', $request->input('billingAddress.mobile'))->first();
+            $customer = OrderAddress::join('payments', 'payments.order_id', '=', 'ec_order_addresses.order_id')->where('status', 'completed')->where('phone', $request->input('billingAddress.mobile'))->get();
             // echo $order_address;
-            if($order_address) {
-                $order = Order::where('id', $order_address->order_id)->first();
-                $customer_discount = DB::table('ec_customer_used_coupons')->where('customer_id', $order->user_id)->where('discount_id', $coupon->id)->first();
+            if(!$customer->isEmpty()) {
+                // if(strtolower($request->input('couponCode')) == 'welcome10') {
+                //     return response()->json(['couponMessage' => 'You Have Already Used this Coupon Code']);
+                // }
+                $customer_discount = DB::table('ec_customer_used_coupons')->where('customer_id', $customer[0]->customer_id)->where('discount_id', $coupon->id)->first();
                 if($customer_discount) {
                     return response()->json(['couponMessage' => 'You Have Already Used this Coupon Code']);
                 }
@@ -532,6 +540,7 @@ class OrderController extends Controller
                         'product_category' => $product['category_name'],
                         'product_subcategory' => isset($product['subcategory_name']) ? $product['subcategory_name'] : '',
                         'vat' => $request->input('vatTax'),
+                        'campaign' => $request->input('couponCode'),
                     ];
                 } elseif(!is_null($exisProduct->sale_price)) {
                     $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
@@ -1344,16 +1353,16 @@ class OrderController extends Controller
         //     return response()->json(['message' => 'Verify Mobile Number First']);
         // }
 
-        $order_address = OrderAddress::where('phone', $request->input('mobile_number'))->first();
+        $order_address = OrderAddress::join('payments', 'payments.order_id', '=', 'ec_order_addresses.order_id')->where('status', 'completed')->where('phone', $request->input('mobile_number'))->get();
 
-        if($order_address) {
-            $order = Order::where('id', $order_address->order_id)->first();
-            if($order) {
-                $customer_discount = DB::table('ec_customer_used_coupons')->where('customer_id', $order->user_id)->where('discount_id', $coupon->id)->first();
+        if(!$order_address->isEmpty()) {
+            // $order = Order::where('id', $order_address->order_id)->first();
+            // if($order) {
+                $customer_discount = DB::table('ec_customer_used_coupons')->where('customer_id', $order_address[0]->customer_id)->where('discount_id', $coupon->id)->first();
                 if($customer_discount) {
                     return response()->json(['message' => 'You Have Already Used this Coupon Code']);
                 }
-            }
+            // }
         }
 
         return response()->json([
