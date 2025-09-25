@@ -1370,4 +1370,429 @@ class OrderController extends Controller
             'coupon'            => $coupon
         ]);
     }
+
+    public function customerDetails(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'customer_id'      => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors());
+        }
+
+        $customer = Customer::select('id', 'name', 'email', 'phone')->where('id', $request->input('customer_id'))->first();
+
+        if(!$customer) {
+            return response()->json(['message' => 'Customer Not Found']);
+        }
+
+        return response()->json([
+            'message' => 'Details Fetched successfully',
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'customer_email' => $customer->email,
+            'customer_mobile' => $customer->phone
+        ]);
+    }
+
+    public function customerUpdate(Request $request)
+    {
+        if($request->flag == 'fpassword') {
+            $validator = Validator::make($request->all(), [
+            'customer_id'      => 'required',
+            'customer_password' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json($validator->errors());
+            }
+
+            $customer = Customer::find($request->input('customer_id'));
+
+            if (!$customer) {
+                return response()->json(['message' => 'Customer Not Found']);
+            }
+
+            $customer->password = Hash::make($request->input('customer_password'));
+            $customer->save();
+
+            return response()->json([
+                'message' => 'Password Updated Successfully',
+                'customer_id' => $customer->id,
+                'customer_name' => $customer->name,
+                'customer_email' => $customer->email,
+                'customer_mobile' => $customer->phone
+            ]);
+        } else {
+            $validator = Validator::make($request->all(), [
+                'customer_id'      => 'required',
+                'customer_name' => 'required',
+                 'customer_email' => 'required|email|unique:ec_customers,email,' . $request->input('customer_id'),
+                'customer_mobile' => 'required|unique:ec_customers,phone,' . $request->input('customer_id'),
+                // 'customer_password' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json($validator->errors());
+            }       
+
+            $customer = Customer::find($request->input('customer_id'));
+
+            if (!$customer) {
+                return response()->json(['message' => 'Customer Not Found']);
+            }
+
+            $customer->name = $request->input('customer_name');
+            $customer->email = $request->input('customer_email');
+            $customer->phone = $request->input('customer_mobile');
+            if(isset($request->customer_password) && !empty($request->customer_password)) {
+                $customer->password = Hash::make($request->input('customer_password'));
+            }
+            $customer->save();
+
+            $addresses = Address::where('customer_id', $request->input('customer_id'))->get();
+
+            if(!$addresses->isEmpty()) {
+                foreach ($addresses as $key => $address) {
+                    $address->name = $request->input('customer_name');
+                    $address->email = $request->input('customer_email');
+                    $address->phone = $request->input('customer_mobile');
+                    $address->save();
+                }   
+            }
+
+            return response()->json([
+                'message' => 'Customer Updated Successfully',
+                'customer_id' => $customer->id,
+                'customer_name' => $customer->name,
+                'customer_email' => $customer->email,
+                'customer_mobile' => $customer->phone
+            ]);
+        }
+    }
+
+    public function customerAddressDetails(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'customer_id'      => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors());
+        }
+
+        $address = Address::where('customer_id', $request->input('customer_id'))->get();
+
+        if($address->isEmpty()) {
+            return response()->json(['message' => 'Customer Address Not Found']);
+        }
+
+        if ($address->count() == 1) {
+            $original = $address->first()->replicate(); // clone the model
+            $original->id = -1; // change ID
+            $address->push($original); // add to collection
+        }
+
+        return response()->json([
+            'message' => 'Details Fetched Successfully',
+            'addresses' => $address
+        ]);
+    }
+
+    public function customerAddressUpdate(Request $request)
+    {
+        if($request->input('address_id') == -1) {
+            $validator = Validator::make($request->all(), [
+                'address_id'      => 'required',
+                'state' => 'required',
+                'city' => 'required',
+                'address' => 'required',
+                'customer_id' => 'required',
+                'name' => 'required',
+                'email' => 'required|email',
+                'mobile' => 'required',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json($validator->errors());
+            }
+            
+            $address = Address::create([
+                'name'      => $request->input('name'),
+                'email'     => $request->input('email'),
+                'phone'     => $request->input('mobile'),
+                'state' => $request->input('state'),
+                'city' => $request->input('city'),
+                'address' => $request->input('address'),
+                'customer_id' => $request->input('customer_id'),
+                'is_default' => $request->input('is_default')
+            ]);
+
+            return response()->json([
+                'message' => 'Customer Address Updated Successfully',
+                'addresses' => $address
+            ]);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'address_id'      => 'required',
+            'state' => 'required',
+            'city' => 'required',
+            'address' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors());
+        }
+
+        $address = Address::find($request->input('address_id'));
+
+        if (!$address) {
+            return response()->json(['message' => 'Customer Address Not Found']);
+        }
+
+        $address->state = $request->input('state');
+        $address->city = $request->input('city');
+        $address->address = $request->input('address');
+        $address->is_default = $request->input('is_default');
+        $address->save();
+
+        return response()->json([
+            'message' => 'Customer Address Updated Successfully',
+            'addresses' => $address
+        ]);
+    }
+
+    public function customerOrders(Request $request)
+    {
+        // Customer/user ID (required for total filtering)
+        $customerId = $request->input('customer_id');
+
+        if (!$customerId) {
+            return response()->json(['message' => 'Customer Id is Required']);
+        }
+
+        // Main columns
+        $columns = [
+            'ec_orders.id',
+            'ec_orders.code',
+            'ec_orders.created_at',
+            'ec_orders.status',
+            'ec_orders.amount',
+            'ec_orders.tax_amount',
+            'ec_orders.sub_total',
+            'ec_orders.coupon_code',
+            'payments.payment_channel'
+        ];
+
+        // Total: All records for the given customer
+        $total = Order::where('ec_orders.user_id', $customerId)->count();
+
+        // Filtered Query
+        $filteredQuery = Order::select('ec_orders.id')
+            ->leftJoin('payments', 'ec_orders.payment_id', '=', 'payments.id')
+            ->where('ec_orders.user_id', $customerId);
+
+        $dataQuery = Order::select(
+                'ec_orders.id',
+                'ec_orders.code',
+                'ec_orders.created_at',
+                'ec_orders.status',
+                'ec_orders.amount',
+                'ec_orders.tax_amount',
+                'ec_orders.sub_total',
+                'ec_orders.coupon_code',
+                'payments.payment_channel'
+            )
+            ->leftJoin('payments', 'ec_orders.payment_id', '=', 'payments.id')
+            ->where('ec_orders.user_id', $customerId);
+
+        // Search filters
+        if ($request->filled('code')) {
+            $filteredQuery->where('ec_orders.code', 'like', '%' . $request->code . '%');
+            $dataQuery->where('ec_orders.code', 'like', '%' . $request->code . '%');
+        }
+
+        if ($request->filled('status')) {
+            $filteredQuery->where('ec_orders.status', 'like', '%' . $request->status . '%');
+            $dataQuery->where('ec_orders.status', 'like', '%' . $request->status . '%');
+        }
+
+        if ($request->filled('created_at')) {
+            $filteredQuery->whereDate('ec_orders.created_at', $request->created_at);
+            $dataQuery->whereDate('ec_orders.created_at', $request->created_at);
+        }
+
+        if ($request->filled('payment_channel')) {
+            $filteredQuery->where('payments.payment_channel', 'like', '%' . $request->payment_channel . '%');
+            $dataQuery->where('payments.payment_channel', 'like', '%' . $request->payment_channel . '%');
+        }
+
+        // Sorting
+        $orderBy = $request->input('orderBy', 'ec_orders.id');
+        $orderDir = $request->input('orderDir', 'desc');
+        if (in_array($orderBy, $columns)) {
+            $dataQuery->orderBy($orderBy, $orderDir);
+        }
+
+        // Pagination
+        $page = (int) $request->input('page', 1);
+        $pageSize = (int) $request->input('pageSize', 10);
+
+        $filteredTotal = $filteredQuery->distinct('ec_orders.id')->count('ec_orders.id');
+
+        $orders = $dataQuery
+            ->skip(($page - 1) * $pageSize)
+            ->take($pageSize)
+            ->get();
+
+        // Add link column
+        $orders->transform(function ($order) {
+            $order->link = '/order-tracking';
+            return $order;
+        });
+
+        return response()->json([
+            'data' => $orders,
+            'total' => $total,
+            'filtered' => $filteredTotal
+        ]);
+    }
+
+    public function customerOrderDetails(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'order_id'      => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors());
+        }
+
+        $order_products = OrderProduct::select('id', 'product_name', 'product_image', 'price', 'qty', 'total_amount', 'discount_percent', 'discount_amount', 'net_amount', 'tax_amount', 'gross_amount', 'is_gift')->where('order_id', $request->input('order_id'))->get();
+
+        if($order_products->isEmpty()) {
+            return response()->json(['message' => 'Order Products Not Found']);
+        }
+
+        $order_address = OrderAddress::select('id', 'name', 'phone', 'email', 'state', 'city', 'address')->where('order_id', $request->input('order_id'))->get();
+
+        return response()->json([
+            'message' => 'Details Fetched successfully',
+            'order_products' => $order_products,
+            'order_address' => $order_address,
+        ]);
+    }
+
+    public function customerCouponDetails(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'customer_id' => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        // General coupons
+        $generalCoupons = collect(Promotion::where('type', 'coupon')
+            ->whereDate('start_date', '<=', now())
+            ->whereDate('end_date', '>=', now())
+            // ->with([
+            //     'couponRules.products' => function ($query) {
+            //         // $query->select('id', 'coupon_rule_id', 'product_id'); // optional: limit fields
+            //     },
+            // ])
+            ->get()
+            ->flatMap(function ($promotion) {
+                return collect($promotion->couponRules)
+                    ->filter(function ($rule) {
+                        return $rule->apply_to !== 'customer' &&
+                            $rule->coupon_code !== null;
+                    })
+                    ->map(function ($rule) use ($promotion) {
+                        return [
+                            'code' => $rule->coupon_code,
+                            'value' => intval($rule->percentage),
+                            'start_date' => Carbon::parse($promotion->start_date)->format('Y-m-d H:i:s'),
+                            'end_date' => Carbon::parse($promotion->end_date)->format('Y-m-d H:i:s'),
+                            'type' => $rule->apply_to, // or $promotion->type if needed
+                        ];
+                    });
+            }));
+
+        // Customer-specific coupons
+        $customerCoupons = collect();
+        $customerId = $request->input('customer_id');
+
+        if ($customerId && $customerId != '-1') {
+            $customerCoupons = Promotion::where('type', 'coupon')
+                ->whereDate('start_date', '<=', now())
+                ->whereDate('end_date', '>=', now())
+                ->whereHas('couponRules', function ($query) use ($customerId) {
+                    $query->where('apply_to', 'customer')
+                        ->whereHas('customers', function ($q) use ($customerId) {
+                            $q->where('customer_id', $customerId);
+                        });
+                })
+                ->with([
+                    'couponRules.customers' => function ($query) use ($customerId) {
+                        $query->where('customer_id', $customerId);
+                    }
+                ])
+                ->get()
+                ->flatMap(function ($promotion) {
+                    return $promotion->couponRules
+                        ->filter(function ($rule) {
+                            return $rule->apply_to === 'customer' && $rule->coupon_code;
+                        })
+                        ->map(function ($rule) use ($promotion) {
+                            return [
+                                'code' => $rule->coupon_code,
+                                'value' => intval($rule->percentage),
+                                'start_date' => Carbon::parse($promotion->start_date)->format('Y-m-d H:i:s'),
+                                'end_date' => Carbon::parse($promotion->end_date)->format('Y-m-d H:i:s'),
+                                'type' => $rule->apply_to,
+                            ];
+                        });
+                });
+        }
+
+        // Merge and return
+        $mergedCoupons = $generalCoupons->merge($customerCoupons);
+
+        return response()->json([
+            'message' => 'Details Fetched Successfully',
+            'coupons' => $mergedCoupons
+        ]);
+    }
+
+    public function customerPasswordCheck(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'customer_id'      => 'required',
+            'customer_password' => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors());
+        }
+        
+        $customer = Customer::find($request->input('customer_id'));
+
+        if (!$customer) {
+            return response()->json(['message' => 'Customer Not Found']);
+        }
+
+        $customer_password = Hash::check($request->input('customer_password'), $customer->password);
+
+        if (!Hash::check($request->input('customer_password'), $customer->password)) {
+            return response()->json(['message' => 'Incorrect Password']);
+        }
+
+        return response()->json([
+            'message' => 'Customer Found Successfully',
+        ]);
+    }
 }
