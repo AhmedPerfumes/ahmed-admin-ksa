@@ -495,7 +495,7 @@
         },
         {
             "name": "botble/get-started",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/packages/get-started",
@@ -521,7 +521,7 @@
         },
         {
             "name": "botble/installer",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/packages/installer",
@@ -550,7 +550,7 @@
         },
         {
             "name": "botble/menu",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/packages/menu",
@@ -583,7 +583,7 @@
         },
         {
             "name": "botble/optimize",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/packages/optimize",
@@ -615,7 +615,7 @@
         },
         {
             "name": "botble/page",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/packages/page",
@@ -645,7 +645,7 @@
         },
         {
             "name": "botble/platform",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/core",
@@ -751,7 +751,7 @@
         },
         {
             "name": "botble/plugin-management",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/packages/plugin-management",
@@ -780,7 +780,7 @@
         },
         {
             "name": "botble/revision",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/packages/revision",
@@ -809,7 +809,7 @@
         },
         {
             "name": "botble/seo-helper",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/packages/seo-helper",
@@ -842,7 +842,7 @@
         },
         {
             "name": "botble/shortcode",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/packages/shortcode",
@@ -874,7 +874,7 @@
         },
         {
             "name": "botble/sitemap",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/packages/sitemap",
@@ -903,7 +903,7 @@
         },
         {
             "name": "botble/slug",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/packages/slug",
@@ -935,7 +935,7 @@
         },
         {
             "name": "botble/theme",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/packages/theme",
@@ -976,7 +976,7 @@
         },
         {
             "name": "botble/widget",
-            "version": "dev-saad",
+            "version": "dev-saood",
             "dist": {
                 "type": "path",
                 "url": "./platform/packages/widget",
@@ -7877,16 +7877,16 @@
         },
         {
             "name": "symfony/cache",
-            "version": "v6.4.24",
+            "version": "v6.4.26",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/cache.git",
-                "reference": "d038cd3054aeaf1c674022a77048b2ef6376a175"
+                "reference": "66c853ddcbf85c1984169869be498c3e7597b367"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/cache/zipball/d038cd3054aeaf1c674022a77048b2ef6376a175",
-                "reference": "d038cd3054aeaf1c674022a77048b2ef6376a175",
+                "url": "https://api.github.com/repos/symfony/cache/zipball/66c853ddcbf85c1984169869be498c3e7597b367",
+                "reference": "66c853ddcbf85c1984169869be498c3e7597b367",
                 "shasum": ""
             },
             "require": {
@@ -7953,7 +7953,7 @@
                 "psr6"
             ],
             "support": {
-                "source": "https://github.com/symfony/cache/tree/v6.4.24"
+                "source": "https://github.com/symfony/cache/tree/v6.4.26"
             },
             "funding": [
                 {
@@ -7973,7 +7973,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-07-30T09:32:03+00:00"
+            "time": "2025-09-11T09:57:09+00:00"
         },
         {
             "name": "symfony/cache-contracts",
@@ -10523,16 +10523,16 @@
         },
         {
             "name": "symfony/var-exporter",
-            "version": "v6.4.24",
+            "version": "v6.4.26",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/var-exporter.git",
-                "reference": "1e742d559fe5b19d0cdc281b1bf0b1fcc243bd35"
+                "reference": "466fcac5fa2e871f83d31173f80e9c2684743bfc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/var-exporter/zipball/1e742d559fe5b19d0cdc281b1bf0b1fcc243bd35",
-                "reference": "1e742d559fe5b19d0cdc281b1bf0b1fcc243bd35",
+                "url": "https://api.github.com/repos/symfony/var-exporter/zipball/466fcac5fa2e871f83d31173f80e9c2684743bfc",
+                "reference": "466fcac5fa2e871f83d31173f80e9c2684743bfc",
                 "shasum": ""
             },
             "require": {
@@ -10580,7 +10580,7 @@
                 "serialize"
             ],
             "support": {
-                "source": "https://github.com/symfony/var-exporter/tree/v6.4.24"
+                "source": "https://github.com/symfony/var-exporter/tree/v6.4.26"
             },
             "funding": [
                 {
@@ -10600,7 +10600,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-07-10T08:14:14+00:00"
+            "time": "2025-09-11T09:57:09+00:00"
         },
         {
             "name": "tightenco/ziggy",
@@ -14409,6 +14409,6 @@
         "ext-pdo": "*",
         "ext-zip": "*"
     },
-    "platform-dev": [],
+    "platform-dev": {},
     "plugin-api-version": "2.6.0"
 }
