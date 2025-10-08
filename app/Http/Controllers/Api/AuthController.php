@@ -62,7 +62,7 @@ class AuthController extends Controller
         $p = "E89_6C3";
         $password = $passw.$pass.$p;
 
-        curl_setopt($ch, CURLOPT_URL, "https://myinboxmedia.in/api/mim/SendSMS?userid=MIM2300278&pwd=".$password."&mobile=971".ltrim($request->mobile, $request->mobile[0])."&sender=Ahmedper&msg=".$otp."".urlencode(' is your OTP for Registration')."&msgtype=16");
+        curl_setopt($ch, CURLOPT_URL, "https://myinboxmedia.in/api/mim/SendSMS?userid=MIM2300278&pwd=".$password."&mobile=966".ltrim($request->mobile, $request->mobile[0])."&sender=Ahmedper&msg=".$otp."".urlencode(' is your OTP for Registration')."&msgtype=16");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
 
@@ -86,7 +86,7 @@ class AuthController extends Controller
         CURLOPT_POSTFIELDS =>'{
             "ProfileId": "MIM2400074",
             "APIKey": "#JpXt4fbMCFj",
-            "MobileNumber": 971'.ltrim($request->mobile, $request->mobile[0]).',
+            "MobileNumber": 966'.ltrim($request->mobile, $request->mobile[0]).',
             "templateName": "websiteauthentication",
             "Parameters": [
                 '.$otp.'      
@@ -349,7 +349,7 @@ class AuthController extends Controller
         $p = "E89_6C3";
         $password = $passw.$pass.$p;
 
-        curl_setopt($ch, CURLOPT_URL, "https://myinboxmedia.in/api/mim/SendSMS?userid=MIM2300278&pwd=".$password."&mobile=971".ltrim($request->mobile, $request->mobile[0])."&sender=Ahmedper&msg=".$otp."".urlencode(' is your OTP for Registration')."&msgtype=16");
+        curl_setopt($ch, CURLOPT_URL, "https://myinboxmedia.in/api/mim/SendSMS?userid=MIM2300278&pwd=".$password."&mobile=966".ltrim($request->mobile, $request->mobile[0])."&sender=Ahmedper&msg=".$otp."".urlencode(' is your OTP for Registration')."&msgtype=16");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
 
@@ -373,7 +373,7 @@ class AuthController extends Controller
         CURLOPT_POSTFIELDS =>'{
             "ProfileId": "MIM2400074",
             "APIKey": "#JpXt4fbMCFj",
-            "MobileNumber": 971'.ltrim($request->mobile, $request->mobile[0]).',
+            "MobileNumber": 966'.ltrim($request->mobile, $request->mobile[0]).',
             "templateName": "websiteauthentication",
             "Parameters": [
                 '.$otp.'      
