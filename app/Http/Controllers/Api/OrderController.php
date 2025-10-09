@@ -976,9 +976,11 @@ class OrderController extends Controller
         // array request
         $arrData = array(
             'command'            => 'PURCHASE',
-            'access_code'        => 'WFM9NH5byvZhvY8saSiS',
+            'access_code'        => config('payment.access_code'),
+            // 'access_code'        => 'WFM9NH5byvZhvY8saSiS',
             // 'access_code'        => 'qNkFjECwpNxo36jeMQPm',
-            'merchant_identifier'=> 'c5563f2d',
+            'merchant_identifier'=> config('payment.merchant_identifier'),
+            // 'merchant_identifier'=> 'c5563f2d',
             // 'merchant_identifier'=> 'tUPfHAHW',
             'merchant_reference' => explode('#', $order->code)[1],
             'amount'             => $request->input('finalPrice') * 100,
@@ -1004,16 +1006,19 @@ class OrderController extends Controller
             $shaString .= "$key=$value";
         }
         // make sure to fill your sha request pass phrase
-        $shaString = "02zOYQShW56enOiLUkdHnx-&" . $shaString . "02zOYQShW56enOiLUkdHnx-&";
+        $shaString = config('payment.sha_string') . $shaString . config('payment.sha_string');
+        // $shaString = "02zOYQShW56enOiLUkdHnx-&" . $shaString . "02zOYQShW56enOiLUkdHnx-&";
         // $shaString = "742vW6dVadHHAxMO45VESS*{". $shaString . '742vW6dVadHHAxMO45VESS*{';
         $signature = hash("sha256", $shaString);
         // your request signature
         // echo $signature;
         $requestParams = array(
             'command'            => 'PURCHASE',
-            'access_code'        => 'WFM9NH5byvZhvY8saSiS',
+            'access_code'        => config('payment.access_code'),
+            // 'access_code'        => 'WFM9NH5byvZhvY8saSiS',
             // 'access_code'        => 'qNkFjECwpNxo36jeMQPm',
-            'merchant_identifier'=> 'c5563f2d',
+            'merchant_identifier'=> config('payment.merchant_identifier'),
+            // 'merchant_identifier'=> 'c5563f2d',
             // 'merchant_identifier'=> 'tUPfHAHW',
             'merchant_reference' => explode('#', $order->code)[1],
             'amount'             => $request->input('finalPrice') * 100,
@@ -1036,7 +1041,8 @@ class OrderController extends Controller
         );
 
 
-        $redirectUrl = 'https://sbcheckout.payfort.com/FortAPI/paymentPage';
+        $redirectUrl = config('payment.redirect_url');
+        // $redirectUrl = 'https://sbcheckout.payfort.com/FortAPI/paymentPage';
         // $redirectUrl = 'https://checkout.payfort.com/FortAPI/paymentPage';
         return response(['redirectUrl' => $redirectUrl, 'requestParams' => $requestParams]);
     }
@@ -1148,11 +1154,13 @@ class OrderController extends Controller
         
         // echo "<pre>";print_r($requestParams);die;
         // echo json_encode($requestParams);die;
-        $PROFILE_ID = 48012;
+        $PROFILE_ID = config('payment.tabby_profile_id');
+        // $PROFILE_ID = 48012;
         // $PROFILE_ID = 48353;
-        $SERVER_KEY = 'pk_test_019228fd-8e52-3ecd-f813-bf11dc8e2118';
+        $SERVER_KEY = config('payment.tabby_public_key');
+        // $SERVER_KEY = 'pk_test_019228fd-8e52-3ecd-f813-bf11dc8e2118';
         // $SERVER_KEY = 'pk_019228fd-8e52-3ecd-f813-bf103e201ffe';
-        $BASE_URL = 'https://api.tabby.ai/api/v2/checkout';
+        $BASE_URL = config('payment.tabby_base_url');
 
         $data['profile_id'] = $PROFILE_ID;
         $curl = curl_init();
@@ -1184,9 +1192,10 @@ class OrderController extends Controller
         // $order = Order::where('user_id', $customer->id)->orderBy('id', 'desc')->first();
         $order = Order::where('code', base64_decode($request->query('order_number')))->orderBy('id', 'desc')->first();
         // echo "<pre>";print_r($order);
-        $BASE_URL = 'https://api.tabby.ai/api/v2/payments/';
+        $BASE_URL = config('payment.tabby_base_url');
         // $SERVER_KEY = 'sk_019228fd-8e52-3ecd-f813-bf1111408314';
-        $SERVER_KEY = 'sk_test_019228fd-8e52-3ecd-f813-bf12445e44d4';
+        // $SERVER_KEY = 'sk_test_019228fd-8e52-3ecd-f813-bf12445e44d4';
+        $SERVER_KEY = config('payment.tabby_secret_key');
 
         // Initialize cURL session
         $ch = curl_init();
