@@ -66,4 +66,13 @@ Route::middleware('customLogs')->group(function () {
 
     // Cron Route
     Route::get('/tabbyAllPayments', [TabbyCronController::class, 'tabbyAllPayments']);
+
+    Route::post('/customerDetails', [OrderController::class, 'customerDetails']);
+    Route::post('/customerUpdate', [OrderController::class, 'customerUpdate']);
+    Route::post('/customerAddressDetails', [OrderController::class, 'customerAddressDetails']);
+    Route::post('/customerAddressUpdate', [OrderController::class, 'customerAddressUpdate']);
+    Route::get('/customerOrders', [OrderController::class, 'customerOrders']);
+    Route::post('/customerOrderDetails', [OrderController::class, 'customerOrderDetails']);
+    Route::post('/customerCouponDetails', [OrderController::class, 'customerCouponDetails']);
+    Route::post('/customerPasswordCheck', [OrderController::class, 'customerPasswordCheck']);
 });

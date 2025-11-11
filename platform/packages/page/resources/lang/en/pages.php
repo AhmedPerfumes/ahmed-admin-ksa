@@ -7,6 +7,8 @@ return [
         'name_placeholder' => 'Page\'s name (Maximum 120 characters)',
         'content' => 'Content',
         'note' => 'Note content',
+        'link' => 'Link',
+
     ],
     'notices' => [
         'no_select' => 'Please select at least one record to take this action!',

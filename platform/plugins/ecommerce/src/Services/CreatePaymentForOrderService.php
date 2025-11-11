@@ -16,6 +16,8 @@ use Botble\Ecommerce\Models\OrderAddress;
 use Botble\Ecommerce\Models\Address;
 use Botble\Ecommerce\Models\OrderProduct;
 use PHPMailer\PHPMailer\PHPMailer;
+use App\Models\ActiveCoupon;
+
 
 class CreatePaymentForOrderService
 {
@@ -87,6 +89,71 @@ class CreatePaymentForOrderService
         // echo "<pre>";print_r($order_products);die;
 
         if($paymentStat == 'completed' || $paymentMethod == 'cod') {
+            $activeCoupon = ActiveCoupon::where('order_id', $order->id)->first();
+        if ($activeCoupon) {
+            try {
+                $curl = curl_init();
+                $payload = [
+                    'couponRegistrationId' => $activeCoupon->couponRegistrationId,
+                    'refDocNo'             => $order->code,
+                    'salesType'            => $activeCoupon->salesType,
+                    'company'              => $activeCoupon->company, // This will be "KSA"
+                    'whsCode'              => $activeCoupon->whsCode,
+                    'custNo'               => $customerId,
+                    'mobileNo'             => $shipping_data->phone ?? '',
+                    'netAmount'            => $order->amount,
+                ];
+                if ($activeCoupon->couponRegistrationId == 0) {
+                    $payload['couponCode'] = $activeCoupon->couponCode;
+                }
+                \Log::info('KSA Redeem Payload: ' . json_encode($payload));
+                    
+                curl_setopt_array($curl, [
+                    CURLOPT_URL            => env('SMART_VIEW_COUPON_API_URL') . 'Coupon/Redeem',
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_ENCODING       => '',
+                    CURLOPT_MAXREDIRS      => 10,
+                    CURLOPT_TIMEOUT        => 0,
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_CUSTOMREQUEST  => 'POST',
+                    CURLOPT_POSTFIELDS     => json_encode($payload),
+                    CURLOPT_HTTPHEADER     => [
+                        'Content-Type: application/json'
+                    ],
+                ]);
+                
+                $response = curl_exec($curl);
+                $curlError = curl_error($curl);
+
+                \Log::info('KSA Redeem API Response: ' . $response);
+
+                if ($curlError) {
+                    // Handle cURL-level errors
+                    \Log::error('KSA Redeem API cURL Error: ' . $curlError);
+                    $activeCoupon->status = 'Redeem cURL Error';
+                } else {
+                    $responseData = json_decode($response);
+
+                    // Check if JSON decoded and responseType is 0 (success)
+                    if ($responseData && isset($responseData->responseType) && $responseData->responseType == 0) {
+                        $activeCoupon->status = 'Redeemed';
+                    } else {
+                        // Store the API's error message
+                        $errorMessage = $responseData->message ?? 'Redeem Failed';
+                        $activeCoupon->status = !empty($errorMessage) ? Str::limit($errorMessage, 250) : 'Redeem Failed';
+                    }
+                }
+
+                $activeCoupon->save();
+                curl_close($curl);
+            } catch (\Exception $e) {
+                \Log::error('KSA Redeem API Error: ' . $e->getMessage());
+                
+                $activeCoupon->status = 'Redeem Exception';
+                $activeCoupon->save();
+            }
+        }
             // $ch = curl_init();
 
             // $passw = "11F2";

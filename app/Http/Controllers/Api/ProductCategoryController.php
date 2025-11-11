@@ -75,7 +75,7 @@ class ProductCategoryController extends Controller
         $currency = Currency::select('symbol')->where('is_default', 1)->first();
         $home_sliders = SimpleSliderItem::select('title', 'image', 'link', 'order', 'sub_title', 'season', 'type', 'color')->where('type', 'desktop')->orderBy('order', 'asc')->get();
         $home_mobile_sliders = SimpleSliderItem::select('title', 'image', 'link', 'order', 'sub_title', 'season', 'type', 'color')->where('type', 'mobile')->orderBy('order', 'asc')->get();
-        $pop_up = Page::select('name','content','description','image','mobile_image')->get();
+        $pop_up = Page::select('name','content','description','image','mobile_image','link')->get();
         $top_header=ProductAttribute::select('title','color')->get();
 
         return response()->json(['productCategories' => $productCategories, 'tax' => $tax, 'shipping_service_charges' => $shipping_service_charges, 'currency' => $currency, 'home_sliders' => $home_sliders, 'home_mobile_sliders' => $home_mobile_sliders, 'top_header' => $top_header, 'pop_up' => $pop_up]);
