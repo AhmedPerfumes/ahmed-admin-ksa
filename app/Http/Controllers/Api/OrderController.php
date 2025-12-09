@@ -597,49 +597,49 @@ class OrderController extends Controller
                 //     ];
                 // }
                 // ✅ ADD THIS NEW BLOCK
-elseif(isset($product['is_coupon']) && !isset($product['is_gift']) && is_null($exisProduct->sale_price)) {
+        elseif(isset($product['is_coupon']) && !isset($product['is_gift']) && is_null($exisProduct->sale_price)) {
 
-    $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
-    $total_amount = $price * $quantity;
+                    $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
+                    $total_amount = $price * $quantity;
 
-    if ($product['coupon_type'] == 'percent') {
-        $discount_percent = $product['value'];
-        $discount_amount = ($total_amount / 100) * $discount_percent;
-        $net_amount = $total_amount - $discount_amount;
-    } else { // 'amount'
-        $discount_percent = 0;
-        // Assumes 'value' is the discount per unit, pre-tax
-        $discount_amount = ($product['value'] / (1 + ($request->input('vatTax') / 100))) * $quantity;
-        $net_amount = $total_amount - $discount_amount;
-    }
+                    if ($product['coupon_type'] == 'percent') {
+                        $discount_percent = $product['value'];
+                        $discount_amount = ($total_amount / 100) * $discount_percent;
+                        $net_amount = $total_amount - $discount_amount;
+                    } else { // 'amount'
+                        $discount_percent = 0;
+                        // Assumes 'value' is the discount per unit, pre-tax
+                        $discount_amount = ($product['value'] / (1 + ($request->input('vatTax') / 100))) * $quantity;
+                        $net_amount = $total_amount - $discount_amount;
+                    }
 
-    $tax_amount = ($net_amount / 100) * $request->input('vatTax');
-    $gross_amount = $net_amount + $tax_amount;
-    $options = array('name' => $exisProduct->name, 'image' => $exisProduct->image, 'attributes' => ' ', 'taxRate' => $exisProduct->percentage, 'options' => [], 'extras' => [], 'sku' => $exisProduct->sku, 'weight' => $exisProduct->weight, 'original_price' => $exisProduct->price, 'product_type' => $exisProduct->product_type);
+                    $tax_amount = ($net_amount / 100) * $request->input('vatTax');
+                    $gross_amount = $net_amount + $tax_amount;
+                    $options = array('name' => $exisProduct->name, 'image' => $exisProduct->image, 'attributes' => ' ', 'taxRate' => $exisProduct->percentage, 'options' => [], 'extras' => [], 'sku' => $exisProduct->sku, 'weight' => $exisProduct->weight, 'original_price' => $exisProduct->price, 'product_type' => $exisProduct->product_type);
 
-    $orderProduct = [
-        'order_id'           => $order->id,
-        'product_id'         => $product['product_id'],
-        'product_name'       => $exisProduct->name,
-        'product_image'      => $exisProduct->image,
-        'qty'                => $quantity,
-        'weight'             => $exisProduct->weight,
-        'price'              => $price,
-        'total_amount'       => $total_amount,
-        'discount_percent'   => $discount_percent,
-        'discount_amount'    => $discount_amount,
-        'net_amount'         => $net_amount,
-        'tax_amount'         => $tax_amount,
-        'gross_amount'       => $gross_amount,
-        'product_options'    => [],
-        'options'            => json_encode($options),
-        'product_type'       => $exisProduct->product_type,
-        'product_category'   => $product['category_name'],
-        'product_subcategory' => isset($product['subcategory_name']) ? $product['subcategory_name'] : '',
-        'vat'                => $request->input('vatTax'),
-        'campaign'           => $request->input('couponCode'), // Use the coupon code as campaign
-    ];
-}
+                    $orderProduct = [
+                        'order_id'           => $order->id,
+                        'product_id'         => $product['product_id'],
+                        'product_name'       => $exisProduct->name,
+                        'product_image'      => $exisProduct->image,
+                        'qty'                => $quantity,
+                        'weight'             => $exisProduct->weight,
+                        'price'              => $price,
+                        'total_amount'       => $total_amount,
+                        'discount_percent'   => $discount_percent,
+                        'discount_amount'    => $discount_amount,
+                        'net_amount'         => $net_amount,
+                        'tax_amount'         => $tax_amount,
+                        'gross_amount'       => $gross_amount,
+                        'product_options'    => [],
+                        'options'            => json_encode($options),
+                        'product_type'       => $exisProduct->product_type,
+                        'product_category'   => $product['category_name'],
+                        'product_subcategory' => isset($product['subcategory_name']) ? $product['subcategory_name'] : '',
+                        'vat'                => $request->input('vatTax'),
+                        'campaign'           => $request->input('couponCode'), // Use the coupon code as campaign
+                    ];
+                }
                  elseif(!is_null($exisProduct->sale_price)) {
                     $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
                     $total_amount = $price * $quantity;
@@ -798,15 +798,15 @@ elseif(isset($product['is_coupon']) && !isset($product['is_gift']) && is_null($e
             if ($couponCode = $request->input('couponCode')) {
                 Discount::getFacadeRoot()->afterOrderPlaced($couponCode, $request->input('customer_id') ? $request->input('customer_id') : $customer_id);
             }
-if (!empty($decode) && !empty($decode->data) && is_array($decode->data)) {
-    $couponObject = $decode->data[0];
-    $couponData = (array) $couponObject;
-    $couponData['order_id'] = $order->id;
+            if (!empty($decode) && !empty($decode->data) && is_array($decode->data)) {
+                $couponObject = $decode->data[0];
+                $couponData = (array) $couponObject;
+                $couponData['order_id'] = $order->id;
 
-    // Add any required default values for NOT NULL columns here
+                // Add any required default values for NOT NULL columns here
 
-    ActiveCoupon::create($couponData);
-}
+                ActiveCoupon::create($couponData);
+            }
             if($request->input('customer_id')) {
                 $loggedInCustomer = Customer::where('id', $request->input('customer_id'))->first();
             } else {
@@ -919,42 +919,42 @@ if (!empty($decode) && !empty($decode->data) && is_array($decode->data)) {
                 // } 
                 elseif(isset($product['is_coupon']) && !isset($product['is_gift']) && is_null($exisProduct->sale_price)) {
 
-    $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
-    $total_amount = $price * $quantity;
+                    $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
+                    $total_amount = $price * $quantity;
 
-    if ($product['coupon_type'] == 'percent') {
-        $discount_percent = $product['value'];
-        $discount_amount = ($total_amount / 100) * $discount_percent;
-        $net_amount = $total_amount - $discount_amount;
-    } else { // 'amount'
-        $discount_percent = 0;
-        $discount_amount = ($product['value'] / (1 + ($request->input('vatTax') / 100))) * $quantity;
-        $net_amount = $total_amount - $discount_amount;
-    }
+                    if ($product['coupon_type'] == 'percent') {
+                        $discount_percent = $product['value'];
+                        $discount_amount = ($total_amount / 100) * $discount_percent;
+                        $net_amount = $total_amount - $discount_amount;
+                    } else { // 'amount'
+                        $discount_percent = 0;
+                        $discount_amount = ($product['value'] / (1 + ($request->input('vatTax') / 100))) * $quantity;
+                        $net_amount = $total_amount - $discount_amount;
+                    }
 
-    $tax_amount = ($net_amount / 100) * $request->input('vatTax');
-    $gross_amount = $net_amount + $tax_amount;
-    $options = array('name' => $exisProduct->name, 'image' => $exisProduct->image, 'attributes' => ' ', 'taxRate' => $exisProduct->percentage, 'options' => [], 'extras' => [], 'sku' => $exisProduct->sku, 'weight' => $exisProduct->weight, 'original_price' => $exisProduct->price, 'product_type' => $exisProduct->product_type);
+                    $tax_amount = ($net_amount / 100) * $request->input('vatTax');
+                    $gross_amount = $net_amount + $tax_amount;
+                    $options = array('name' => $exisProduct->name, 'image' => $exisProduct->image, 'attributes' => ' ', 'taxRate' => $exisProduct->percentage, 'options' => [], 'extras' => [], 'sku' => $exisProduct->sku, 'weight' => $exisProduct->weight, 'original_price' => $exisProduct->price, 'product_type' => $exisProduct->product_type);
 
-    $orderProduct = [
-        'invoice_id'       => $invoice->id,
-        'reference_type'   => 'Botble\Ecommerce\Models\Product',
-        'reference_id'     => $exisProduct->id,
-        'name'             => $exisProduct->name,
-        'description'      => $exisProduct->description,
-        'image'            => $exisProduct->image,
-        'qty'              => $quantity,
-        'price'            => $price,
-        'sub_total'        => $total_amount,
-        'discount_percent' => $discount_percent,
-        'discount_amount'  => $discount_amount,
-        'net_amount'       => $net_amount,
-        'tax_amount'       => $tax_amount,
-        'gross_amount'     => $gross_amount,
-        'amount'           => $gross_amount,
-        'options'          => json_encode($options),
-    ];
-}
+                    $orderProduct = [
+                        'invoice_id'       => $invoice->id,
+                        'reference_type'   => 'Botble\Ecommerce\Models\Product',
+                        'reference_id'     => $exisProduct->id,
+                        'name'             => $exisProduct->name,
+                        'description'      => $exisProduct->description,
+                        'image'            => $exisProduct->image,
+                        'qty'              => $quantity,
+                        'price'            => $price,
+                        'sub_total'        => $total_amount,
+                        'discount_percent' => $discount_percent,
+                        'discount_amount'  => $discount_amount,
+                        'net_amount'       => $net_amount,
+                        'tax_amount'       => $tax_amount,
+                        'gross_amount'     => $gross_amount,
+                        'amount'           => $gross_amount,
+                        'options'          => json_encode($options),
+                    ];
+                }
                 elseif(!is_null($exisProduct->sale_price)) {
                     $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
                     $total_amount = $price * $quantity;
@@ -1411,8 +1411,7 @@ if (!empty($decode) && !empty($decode->data) && is_array($decode->data)) {
         header('Location: http://localhost:3000/'.$order->lang.'/shop-order-payment-complete?q='.base64_encode($order->code));exit();
     }
 
-    public function trackOrder(Request $request)
-    {
+    public function trackOrder(Request $request){
         $validator = Validator::make($request->all(), [
             'order_number'      => 'required',
             'billing_email'      => 'required'
@@ -1447,8 +1446,7 @@ if (!empty($decode) && !empty($decode->data) && is_array($decode->data)) {
         ]);
     }
 
-    public function orderDetails(Request $request)
-    {
+    public function orderDetails(Request $request) {
         $validator = Validator::make($request->all(), [
             'order_number'      => 'required'
         ]);
@@ -1526,8 +1524,7 @@ if (!empty($decode) && !empty($decode->data) && is_array($decode->data)) {
         ]);
     }
 
-    public function customerDetails(Request $request)
-    {
+    public function customerDetails(Request $request) {
         $validator = Validator::make($request->all(), [
             'customer_id'      => 'required'
         ]);
@@ -1551,8 +1548,7 @@ if (!empty($decode) && !empty($decode->data) && is_array($decode->data)) {
         ]);
     }
 
-    public function customerUpdate(Request $request)
-    {
+    public function customerUpdate(Request $request) {
         if($request->flag == 'fpassword') {
             $validator = Validator::make($request->all(), [
             'customer_id'      => 'required',
@@ -1627,8 +1623,7 @@ if (!empty($decode) && !empty($decode->data) && is_array($decode->data)) {
         }
     }
 
-    public function customerAddressDetails(Request $request)
-    {
+    public function customerAddressDetails(Request $request) {
         $validator = Validator::make($request->all(), [
             'customer_id'      => 'required'
         ]);
@@ -1655,8 +1650,7 @@ if (!empty($decode) && !empty($decode->data) && is_array($decode->data)) {
         ]);
     }
 
-    public function customerAddressUpdate(Request $request)
-    {
+    public function customerAddressUpdate(Request $request) {
         if($request->input('address_id') == -1) {
             $validator = Validator::make($request->all(), [
                 'address_id'      => 'required',
@@ -1719,8 +1713,7 @@ if (!empty($decode) && !empty($decode->data) && is_array($decode->data)) {
         ]);
     }
 
-    public function customerOrders(Request $request)
-    {
+    public function customerOrders(Request $request) {
         // Customer/user ID (required for total filtering)
         $customerId = $request->input('customer_id');
 
@@ -1815,8 +1808,7 @@ if (!empty($decode) && !empty($decode->data) && is_array($decode->data)) {
         ]);
     }
 
-    public function customerOrderDetails(Request $request)
-    {
+    public function customerOrderDetails(Request $request) {
         $validator = Validator::make($request->all(), [
             'order_id'      => 'required'
         ]);
@@ -1840,8 +1832,7 @@ if (!empty($decode) && !empty($decode->data) && is_array($decode->data)) {
         ]);
     }
 
-    public function customerCouponDetails(Request $request)
-    {
+    public function customerCouponDetails(Request $request) {
         $validator = Validator::make($request->all(), [
             'customer_id' => 'required'
         ]);
@@ -1923,8 +1914,7 @@ if (!empty($decode) && !empty($decode->data) && is_array($decode->data)) {
         ]);
     }
 
-    public function customerPasswordCheck(Request $request)
-    {
+    public function customerPasswordCheck(Request $request) {
         $validator = Validator::make($request->all(), [
             'customer_id'      => 'required',
             'customer_password' => 'required'
