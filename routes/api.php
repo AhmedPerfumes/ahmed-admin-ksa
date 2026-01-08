@@ -75,4 +75,7 @@ Route::middleware('customLogs')->group(function () {
     Route::post('/customerOrderDetails', [OrderController::class, 'customerOrderDetails']);
     Route::post('/customerCouponDetails', [OrderController::class, 'customerCouponDetails']);
     Route::post('/customerPasswordCheck', [OrderController::class, 'customerPasswordCheck']);
+
+    Route::withoutMiddleware('restrict.domains')->post('/tamaraPaymentResponse', [OrderController::class, 'tamaraPaymentResponse']);
+    Route::withoutMiddleware('restrict.domains')->any('/tamaraPaymentWebhook', [OrderController::class, 'tamaraPaymentWebhook']);
 });

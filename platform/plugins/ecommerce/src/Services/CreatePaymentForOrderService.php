@@ -52,7 +52,7 @@ class CreatePaymentForOrderService
         } elseif ($paymentMethod == 'payfort') {
             $paymentStat = $paymentStatus == 'Success' ? 'completed' : 'failed';
         } else {
-            $paymentStat = ($paymentStatus == 'AUTHORIZED' || $paymentStatus == 'CREATED' || $paymentStatus == 'CLOSED') ? 'completed' : 'failed';
+            $paymentStat = (($paymentStatus == 'fully_captured') || ($paymentStatus == 'A') || ($paymentStatus == 'AUTHORIZED' || $paymentStatus == 'CREATED' || $paymentStatus == 'CLOSED')) ? 'completed' : 'failed';
         }
 
         $data = [
