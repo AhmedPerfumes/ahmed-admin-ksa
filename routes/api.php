@@ -41,6 +41,9 @@ Route::middleware('customLogs')->group(function () {
     // Product Routes
     Route::withoutMiddleware('customLogs')->post('/products', [ProductController::class, 'getProducts']);
 
+    //Search Suggestion
+    Route::get('/search-suggestions', [ProductController::class, 'getSearchSuggestions']);
+
     // All Product Routes
     Route::withoutMiddleware('customLogs')->post('/allProducts', [ProductController::class, 'getAllProducts']);
     Route::withoutMiddleware('customLogs')->post('/exportProducts', [ProductController::class, 'getExportProducts']);
