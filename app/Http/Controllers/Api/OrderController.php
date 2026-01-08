@@ -1018,6 +1018,12 @@ class OrderController extends Controller
                     ];
                 }
                 elseif(!is_null($exisProduct->sale_price)) {
+
+
+
+
+
+
                     $price = $exisProduct->price / (1 + ($request->input('vatTax') / 100));
                     $total_amount = $price * $quantity;
                     $sale_price = $exisProduct->sale_price / (1 + ($request->input('vatTax') / 100));

@@ -585,4 +585,74 @@ class ProductController extends Controller
             // print_r($prod);die();
         return response()->json($prod);
     }
+     public function getSearchSuggestions(Request $request)
+{
+    // 1. Prepare the request for the internal call
+    $request->merge([
+        'limit' => 6, 
+        'page' => 1,
+        'search' => $request->input('keyword') 
+    ]);
+
+    // 2. Call the internal method
+    $response = $this->getAllProducts($request);
+    
+    // 3. Get the underlying data from the JsonResponse
+    $originalData = $response->getData();
+    
+    // Laravel's paginate() puts results in a 'data' property
+    $items = isset($originalData->data) ? $originalData->data : [];
+
+    // 4. Format for the frontend
+   $formatted = collect($items)->map(function($item) {
+    // 1. Cleaner helper
+    $cleaner = function($str) {
+        $str = str_replace('&amp;', '&', $str); // Convert &amp; to & for URL cleaning
+        $str = preg_replace('/[^\w\s-]/', '', $str);
+        $str = preg_replace('/\s+/', ' ', $str);
+        return trim($str);
+    };
+
+    // 2. IMAGE FALLBACK LOGIC
+    $displayImage = $item->image;
+    if (empty($displayImage) && !empty($item->images)) {
+        // If 'image' is null, check the JSON 'images' gallery
+        $gallery = is_string($item->images) ? json_decode($item->images, true) : $item->images;
+        if (is_array($gallery) && count($gallery) > 0) {
+            $displayImage = $gallery[0]; 
+        }
+    }
+
+    // 3. CATEGORY & SUBCAT LOGIC
+    $categorySlug = strtolower(str_replace(' ', '-', $cleaner($item->category_name ?? 'shop')));
+    
+    // Safely check for subcategory
+    $subcatName = null;
+    if (isset($item->subcategory) && is_object($item->subcategory)) {
+        $subcatName = $item->subcategory->subcategory_name ?? null;
+    }
+
+    if (!empty($subcatName)) {
+        $subcatSlug = strtolower(str_replace(' ', '-', $cleaner($subcatName)));
+    } else {
+        // Your specific fallback logic
+        $fallbacks = ['gift-sets', 'hair-mist', 'extrait-de-parfum'];
+        $subcatSlug = in_array($categorySlug, $fallbacks) ? $categorySlug : "online-exclusive";
+    }
+
+    $productSlug = strtolower(str_replace(' ', '-', $cleaner($item->product_name)));
+
+    return [
+        'name'     => html_entity_decode($item->product_name), // Fixes &amp; for the UI
+        'image'    => $displayImage, 
+        'price'    => $item->price,
+        'url_path' => "/shop/{$categorySlug}/{$subcatSlug}/{$productSlug}"
+    ];
+});
+
+    return response()->json([
+        'success' => true,
+        'data'    => $formatted
+    ]);
+}
 }
