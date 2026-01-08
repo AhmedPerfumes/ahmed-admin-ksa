@@ -57,60 +57,59 @@ class AuthController extends Controller
 
         $ch = curl_init();
 
-        $passw = "11F2";
-        $pass = "$";
-        $p = "E89_6C3";
-        $password = $passw.$pass.$p;
+        $password = env("INBOXMEDIA_PASSWORD");
 
-        curl_setopt($ch, CURLOPT_URL, "https://myinboxmedia.in/api/mim/SendSMS?userid=MIM2300278&pwd=".$password."&mobile=966".ltrim($request->mobile, $request->mobile[0])."&sender=Ahmedper&msg=".$otp."".urlencode(' is your OTP for Registration')."&msgtype=16");
+        curl_setopt($ch, CURLOPT_URL, "https://myinboxmedia.ae/api/mim/SendSMS?userid=MIM2500371&pwd=".$password."&mobile=966".ltrim($request->mobile, $request->mobile[0])."&sender=AHMDPRF&msg=".$otp."".urlencode(' is your OTP for Registration')."&msgtype=19");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
 
         $result = curl_exec($ch);
+        \Log::info("Signup SMS API Raw Response: " . $result);
         if (curl_errno($ch)) {
             echo 'Error:' . curl_error($ch);die;
         }
         curl_close ($ch);
 
-        $curl = curl_init();
+        // $curl = curl_init();
 
-        curl_setopt_array($curl, array(
-        CURLOPT_URL => 'https://waba.myinboxmedia.in/api/sendwaba',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => '',
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 0,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => 'POST',
-        CURLOPT_POSTFIELDS =>'{
-            "ProfileId": "MIM2400074",
-            "APIKey": "#JpXt4fbMCFj",
-            "MobileNumber": 966'.ltrim($request->mobile, $request->mobile[0]).',
-            "templateName": "websiteauthentication",
-            "Parameters": [
-                '.$otp.'      
-            ],
-            "HeaderType": "Text",
-            "Text": "",
-            "MediaUrl": "",
-            "Latitude": 0,
-            "Longitude": 0,
-            "isTemplate": "true",
-            "ButtonOrListJSON": "",
-            "SubClientCode": "",
-            "HeaderParameter": "",
-            "CTAButtonURLParameter":"",
-            "CTAButtonURLParameter2" : ""
-        }',
-            CURLOPT_HTTPHEADER => array(
-                'Content-Type: application/json'
-            ),
-        ));
+        // curl_setopt_array($curl, array(
+        // CURLOPT_URL => 'https://waba.myinboxmedia.in/api/sendwaba',
+        // CURLOPT_RETURNTRANSFER => true,
+        // CURLOPT_ENCODING => '',
+        // CURLOPT_MAXREDIRS => 10,
+        // CURLOPT_TIMEOUT => 0,
+        // CURLOPT_FOLLOWLOCATION => true,
+        // CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        // CURLOPT_CUSTOMREQUEST => 'POST',
+        // CURLOPT_POSTFIELDS =>'{
+        //     "ProfileId": "MIM2400074",
+        //     "APIKey": "#JpXt4fbMCFj",
+        //     "MobileNumber": 966'.ltrim($request->mobile, $request->mobile[0]).',
+        //     "templateName": "websiteauthentication",
+        //     "Parameters": [
+        //         '.$otp.'      
+        //     ],
+        //     "HeaderType": "Text",
+        //     "Text": "",
+        //     "MediaUrl": "",
+        //     "Latitude": 0,
+        //     "Longitude": 0,
+        //     "isTemplate": "true",
+        //     "ButtonOrListJSON": "",
+        //     "SubClientCode": "",
+        //     "HeaderParameter": "",
+        //     "CTAButtonURLParameter":"",
+        //     "CTAButtonURLParameter2" : ""
+        // }',
+        //     CURLOPT_HTTPHEADER => array(
+        //         'Content-Type: application/json'
+        //     ),
+        // ));
 
-        $response = curl_exec($curl);
+        // $response = curl_exec($curl);
 
-        curl_close($curl);
+        // curl_close($curl);
+        
         // echo $response;
 
         // $customer->otp = $otp;
@@ -202,7 +201,7 @@ class AuthController extends Controller
                 'name' => 'required',
                 'email' => 'required|email|unique:ec_customers,email,',
                 'mobile' => 'required|unique:ec_customers,phone,',
-                'password' => 'required',
+                // 'password' => 'required',
             ]);
 
             if ($validator->fails()) {
@@ -215,6 +214,35 @@ class AuthController extends Controller
                 'phone'     => $request->mobile,
                 'password'  => Hash::make($request->password)
             ]);
+
+            $apiUrl = env('SMART_VIEW_COUPON_API_URL').'Coupon/Register';
+
+            $postData = [
+                    'couponId' => "3FDF342E-52C6-4D73-AD84-DA2605E15DF8",
+                'customerName'  => $customer->name,
+                'email' => $customer->email,
+                'mobileNo' => $customer->phone,
+            ];
+
+            $ch = curl_init($apiUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+            ]);
+            
+            $apiResponse = curl_exec($ch);
+            if ($apiResponse === false) {
+                \Log::error('Coupon Register API Error', [
+                    'error' => curl_error($ch),
+                ]);
+            } else {
+                \Log::info('Coupon Register API Response', [
+                    'success' => $apiResponse,
+                ]);
+            }
+            curl_close($ch);
 
             // $coupons = DiscountModel::select('code', 'value', 'start_date', 'end_date')->where('target', 'customer')->where('customer_id', $customer->id)->whereNotNull('code')->whereDate('start_date', '<=', now())->whereDate('end_date', '>=', now())->join('ec_discount_customers', 'ec_discounts.id', '=', 'ec_discount_customers.discount_id', 'left')->get();
 
@@ -340,64 +368,94 @@ class AuthController extends Controller
             return response()->json($validator->errors());
         }        
 
+        $raw_mobile = (string) $request->mobile;
+        $clean_mobile = $raw_mobile;
+
+        if (substr($raw_mobile, 0, 1) === '0') {
+            $clean_mobile = substr($raw_mobile, 1);
+        }
+
+        $final_mobile = "966" . $clean_mobile;
+
         $otp = rand(1111, 9999);
 
         $ch = curl_init();
 
-        $passw = "11F2";
-        $pass = "$";
-        $p = "E89_6C3";
-        $password = $passw.$pass.$p;
+        // $passw = "11F2";
+        // $pass = "$";
+        // $p = "E89_6C3";
+        // $password = $passw.$pass.$p;
+        $password = env("INBOXMEDIA_PASSWORD");
 
-        curl_setopt($ch, CURLOPT_URL, "https://myinboxmedia.in/api/mim/SendSMS?userid=MIM2300278&pwd=".$password."&mobile=966".ltrim($request->mobile, $request->mobile[0])."&sender=Ahmedper&msg=".$otp."".urlencode(' is your OTP for Registration')."&msgtype=16");
+        $sms_params = [
+            'userid' => 'MIM2500371',
+            'pwd'    => $password,
+            'mobile' => $final_mobile,
+            'sender' => 'AHMDPRF',
+            'msg'    => $otp . ' is your OTP for Registration',
+            'msgtype'=> '19'
+        ];
+        $sms_url = "https://myinboxmedia.ae/api/mim/SendSMS?" . http_build_query($sms_params);
+
+        curl_setopt($ch, CURLOPT_URL, $sms_url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
 
         $result = curl_exec($ch);
+
         if (curl_errno($ch)) {
-            echo 'Error:' . curl_error($ch);die;
+            // echo 'Error:' . curl_error($ch);die;
+            \Log::error("Signup SMS API Connection Error: " . curl_error($ch));
         }
+        \Log::info("Signup SMS API Raw Response: " . $result);
         curl_close ($ch);
 
-        $curl = curl_init();
+        // $curl = curl_init();
 
-        curl_setopt_array($curl, array(
-        CURLOPT_URL => 'https://waba.myinboxmedia.in/api/sendwaba',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => '',
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 0,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => 'POST',
-        CURLOPT_POSTFIELDS =>'{
-            "ProfileId": "MIM2400074",
-            "APIKey": "#JpXt4fbMCFj",
-            "MobileNumber": 966'.ltrim($request->mobile, $request->mobile[0]).',
-            "templateName": "websiteauthentication",
-            "Parameters": [
-                '.$otp.'      
-            ],
-            "HeaderType": "Text",
-            "Text": "",
-            "MediaUrl": "",
-            "Latitude": 0,
-            "Longitude": 0,
-            "isTemplate": "true",
-            "ButtonOrListJSON": "",
-            "SubClientCode": "",
-            "HeaderParameter": "",
-            "CTAButtonURLParameter":"",
-            "CTAButtonURLParameter2" : ""
-        }',
-            CURLOPT_HTTPHEADER => array(
-                'Content-Type: application/json'
-            ),
-        ));
+        // $wa_payload = [
+        //     "ProfileId" => "MIM2400074",
+        //     "APIKey" => "#JpXt4fbMCFj",
+        //     "MobileNumber" => (string)$final_mobile,
+        //     "templateName" => "websiteauthentication",
+        //     "Parameters" => [
+        //         (string)$otp 
+        //     ],
+        //     "HeaderType" => "Text",
+        //     "Text" => "",
+        //     "MediaUrl" => "",
+        //     "Latitude" => 0,
+        //     "Longitude" => 0,
+        //     "isTemplate" => "true",
+        //     "ButtonOrListJSON" => "",
+        //     "SubClientCode" => "",
+        //     "HeaderParameter" => "",
+        //     "CTAButtonURLParameter" => "",
+        //     "CTAButtonURLParameter2" => ""
+        // ];
 
-        $response = curl_exec($curl);
+        // curl_setopt_array($curl, array(
+        //     CURLOPT_URL => 'https://waba.myinboxmedia.in/api/sendwaba',
+        //     CURLOPT_RETURNTRANSFER => true,
+        //     CURLOPT_ENCODING => '',
+        //     CURLOPT_MAXREDIRS => 10,
+        //     CURLOPT_TIMEOUT => 0,
+        //     CURLOPT_FOLLOWLOCATION => true,
+        //     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        //     CURLOPT_CUSTOMREQUEST => 'POST',
+        //     CURLOPT_POSTFIELDS => json_encode($wa_payload),
+        //     CURLOPT_HTTPHEADER => array(
+        //         'Content-Type: application/json'
+        //     ),
+        // ));
 
-        curl_close($curl);
+        // $response = curl_exec($curl);
+        // $http_status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        // if (curl_errno($curl)) {
+        //     \Log::error("Signup WA API Connection Error: " . curl_error($curl));
+        // }
+
+        // curl_close($curl);
+        // \Log::info("Signup WA API Status: $http_status | Raw Response: " . $response);
         // echo $response;
 
         if($request->flag == 'fpassword') {
