@@ -40,6 +40,7 @@ Route::middleware('customLogs')->group(function () {
 
     // Product Routes
     Route::withoutMiddleware('customLogs')->post('/products', [ProductController::class, 'getProducts']);
+    Route::post('/products/live-status', [ProductController::class, 'getProductsLiveStatus']);
 
     //Search Suggestion
     Route::get('/search-suggestions', [ProductController::class, 'getSearchSuggestions']);
