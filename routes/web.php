@@ -2,6 +2,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SmsaController;
 use App\Http\Controllers\promotionController;
+use Botble\Ecommerce\Http\Controllers\ProductFragranceNoteController;
+use Botble\Ecommerce\Http\Controllers\ProductController;
 
 // Define a route group with a prefix
 Route::prefix('admin/ecommerce/smsa')->group(function () {
@@ -22,3 +24,13 @@ Route::get('promotions/{promotion}/edit', [PromotionController::class, 'edit'])-
 Route::put('promotions/{promotion}', [PromotionController::class, 'update'])->name('promotions.update');
 Route::delete('/promotions/bulk-delete', [PromotionController::class, 'bulkDelete'])->name('promotions.bulkDelete');
 Route::delete('promotions/{promotion}', [PromotionController::class, 'destroy'])->name('promotions.destroy');
+
+Route::get('products/get-for-tag-input', [ 
+    'as' => 'products.get-for-tag-input', 
+    'uses' => ProductController::class . '@getForTagInput',
+    'permission' => 'products.index',]);
+
+Route::group([ 'prefix' => 'admin/product-fragrance-notes', 'as' => 'product-fragrance-notes.', 'middleware' => ['web', 'auth'],], function () {
+    Route::resource('', ProductFragranceNoteController::class)->parameters(['' => 'id']);
+    Route::delete('items/destroy', [ 'as' => 'deletes', 'uses' => [ProductFragranceNoteController::class, 'destroy'], 'permission' => 'products.destroy',]);
+});
