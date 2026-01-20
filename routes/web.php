@@ -4,6 +4,7 @@ use App\Http\Controllers\SmsaController;
 use App\Http\Controllers\promotionController;
 use Botble\Ecommerce\Http\Controllers\ProductFragranceNoteController;
 use Botble\Ecommerce\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductReviewController;
 
 // Define a route group with a prefix
 Route::prefix('admin/ecommerce/smsa')->group(function () {
@@ -25,12 +26,17 @@ Route::put('promotions/{promotion}', [PromotionController::class, 'update'])->na
 Route::delete('/promotions/bulk-delete', [PromotionController::class, 'bulkDelete'])->name('promotions.bulkDelete');
 Route::delete('promotions/{promotion}', [PromotionController::class, 'destroy'])->name('promotions.destroy');
 
-Route::get('products/get-for-tag-input', [ 
-    'as' => 'products.get-for-tag-input', 
-    'uses' => ProductController::class . '@getForTagInput',
-    'permission' => 'products.index',]);
+Route::get('products/get-for-tag-input', [ProductController::class, 'getForTagInput'])->name('products.get-for-tag-input')->middleware('permission:products.index');
 
-Route::group([ 'prefix' => 'admin/product-fragrance-notes', 'as' => 'product-fragrance-notes.', 'middleware' => ['web', 'auth'],], function () {
-    Route::resource('', ProductFragranceNoteController::class)->parameters(['' => 'id']);
-    Route::delete('items/destroy', [ 'as' => 'deletes', 'uses' => [ProductFragranceNoteController::class, 'destroy'], 'permission' => 'products.destroy',]);
+Route::group([ 'prefix' => 'admin', 'middleware' => ['web', 'auth'],], function () {
+    Route::resource('product-fragrance-notes', ProductFragranceNoteController::class)->parameters(['product-fragrance-notes' => 'id']);
+    Route::delete('product-fragrance-notes/items/destroy', [ProductFragranceNoteController::class, 'destroy'])->name('product-fragrance-notes.deletes');
+});
+
+Route::resource('/admin/product-reviews', ProductReviewController::class);
+Route::group(['prefix' => 'admin/product-reviews', 'as' => 'product-reviews.', 'middleware' => ['web', 'auth'],], function() {
+    Route::get('/', [ProductReviewController::class, 'index'])->name('index');
+    Route::get('/{product_review}', [ProductReviewController::class, 'show'])->name('show');
+    Route::post('/{product_review}/approve', [ProductReviewController::class, 'approve'])->name('approve');
+    Route::delete('/{product_review}', [ProductReviewController::class, 'destroy'])->name('destroy');
 });

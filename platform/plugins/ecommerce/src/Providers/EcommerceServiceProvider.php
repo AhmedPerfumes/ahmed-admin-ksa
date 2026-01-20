@@ -733,13 +733,22 @@ class EcommerceServiceProvider extends ServiceProvider
                     'permissions' => ['ecommerce.invoice.index'],
                 ])
                 ->registerItem([
+                    'id' => 'cms-plugins-product-reviews',
+                    'priority' => 60,
+                    'parent_id' => 'cms-plugins-ecommerce',
+                    'name' => 'Product Reviews',
+                    'icon' => 'ti ti-star',
+                    'url' => route('product-reviews.index'),
+                    'permissions' => ['product-reviews.index'],
+                ])
+                ->registerItem([
                     'id' => 'cms-plugins-ecommerce-product-fragrance-notes',
                     'priority' => 60,
                     'parent_id' => 'cms-plugins-ecommerce',
                     'name' => 'Fragrance Profiles',
                     'icon' => 'fa fa-vial',
                     'url' => route('product-fragrance-notes.index'),
-                    'permissions' => ['products.index'],
+                    'permissions' => ['product-fragrance-notes.index'],
                 ])
                 ->registerItem([
                     'id' => 'cms-plugins-ecommerce-product',

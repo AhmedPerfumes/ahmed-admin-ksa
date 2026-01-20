@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\TabbyCronController;
+use App\Http\Controllers\Api\ProductReviewController as ApiProductReviewController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -40,7 +41,7 @@ Route::middleware('customLogs')->group(function () {
 
     // Product Routes
     Route::withoutMiddleware('customLogs')->post('/products', [ProductController::class, 'getProducts']);
-    Route::post('/products/live-status', [ProductController::class, 'getProductsLiveStatus']);
+    Route::withoutMiddleware('customLogs')->post('/products/live-status', [ProductController::class, 'getProductsLiveStatus']);
 
     //Search Suggestion
     Route::get('/search-suggestions', [ProductController::class, 'getSearchSuggestions']);
@@ -82,4 +83,7 @@ Route::middleware('customLogs')->group(function () {
 
     Route::withoutMiddleware('restrict.domains')->post('/tamaraPaymentResponse', [OrderController::class, 'tamaraPaymentResponse']);
     Route::withoutMiddleware('restrict.domains')->any('/tamaraPaymentWebhook', [OrderController::class, 'tamaraPaymentWebhook']);
+
+    Route::withoutMiddleware('customLogs')->get('/products/{product}/reviews', [ApiProductReviewController::class, 'index']);
+    Route::withoutMiddleware('customLogs')->post('/reviews', [ApiProductReviewController::class, 'store']);
 });
