@@ -34,6 +34,10 @@ Route::middleware('customLogs')->group(function () {
 
     Route::post('/submitReview', [AuthController::class, 'submitReview']);
 
+    Route::get('/freeGiftProducts', [ProductController::class, 'freeGiftProducts']);
+
+    Route::get('/bogoProducts', [ProductController::class, 'bogoProducts']);
+
     // Product Category Routes
     Route::withoutMiddleware('customLogs')->post('/productCategories', [ProductCategoryController::class, 'getProductCategories']);
     Route::withoutMiddleware('customLogs')->post('/productCategoriesTemp', [ProductCategoryController::class, 'getProductCategoriesTemp']);
