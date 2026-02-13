@@ -527,7 +527,6 @@
                 }
             });
 const groupDiscountSelect = new TomSelect('#discount_group_product_ids', { 
-    maxItems: 10,
     plugins: ['remove_button'], // optional but recommended for UX
     closeAfterSelect: false,    // keeps dropdown open for multi-select
     onItemAdd: function() {
@@ -536,7 +535,7 @@ const groupDiscountSelect = new TomSelect('#discount_group_product_ids', {
     }
 });
 
-            const couponGroupSelect = new TomSelect('#coupon_group_product_ids', { maxItems: 10 });
+            const couponGroupSelect = new TomSelect('#coupon_group_product_ids');
             const coupon_product_group_ids = new TomSelect('#coupon_product_group_ids', { maxItems: 10 });
             const couponCustomerSelect = new TomSelect('#coupon_customer_ids', { maxItems: 10 });
             const cashbackGroupProductSelect = new TomSelect('#cashback_group_product_ids', { maxItems: 10 });
