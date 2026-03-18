@@ -26,12 +26,16 @@ Route::put('promotions/{promotion}', [PromotionController::class, 'update'])->na
 Route::delete('/promotions/bulk-delete', [PromotionController::class, 'bulkDelete'])->name('promotions.bulkDelete');
 Route::delete('promotions/{promotion}', [PromotionController::class, 'destroy'])->name('promotions.destroy');
 
-Route::get('products/get-for-tag-input', [ProductController::class, 'getForTagInput'])->name('products.get-for-tag-input')->middleware('permission:products.index');
+Route::get('products/get-for-tag-input', [
+    'as' => 'products.get-for-tag-input',
+    'uses' => '\Botble\Ecommerce\Http\Controllers\ProductController@getForTagInput', // Assumes your admin controller is named ProductController
+    'permission' => 'products.index',
+]);
 
-Route::group([ 'prefix' => 'admin', 'middleware' => ['web', 'auth'],], function () {
-    Route::resource('product-fragrance-notes', ProductFragranceNoteController::class)->parameters(['product-fragrance-notes' => 'id']);
-    Route::delete('product-fragrance-notes/items/destroy', [ProductFragranceNoteController::class, 'destroy'])->name('product-fragrance-notes.deletes');
-});
+// Route::group([ 'prefix' => 'admin', 'middleware' => ['web', 'auth'],], function () {
+//     Route::resource('product-fragrance-notes', ProductFragranceNoteController::class)->parameters(['product-fragrance-notes' => 'id']);
+//     Route::delete('product-fragrance-notes/items/destroy', [ProductFragranceNoteController::class, 'destroy'])->name('product-fragrance-notes.deletes');
+// });
 
 Route::resource('/admin/product-reviews', ProductReviewController::class);
 Route::group(['prefix' => 'admin/product-reviews', 'as' => 'product-reviews.', 'middleware' => ['web', 'auth'],], function() {
@@ -40,3 +44,27 @@ Route::group(['prefix' => 'admin/product-reviews', 'as' => 'product-reviews.', '
     Route::post('/{product_review}/approve', [ProductReviewController::class, 'approve'])->name('approve');
     Route::delete('/{product_review}', [ProductReviewController::class, 'destroy'])->name('destroy');
 });
+// --- START: Fragrance Profiles ---
+Route::group([
+    'prefix' => 'admin/product-fragrance-notes',
+    'as' => 'product-fragrance-notes.',
+    'middleware' => ['web', 'auth'],
+], function () {
+    Route::resource('', ProductFragranceNoteController::class)->parameters(['' => 'id']);
+    Route::delete('items/destroy', [
+        'as' => 'deletes',
+        'uses' => '\Botble\Ecommerce\Http\Controllers\ProductFragranceNoteController@destroy',
+        'permission' => 'products.destroy', // Reuse existing permission
+    ]);
+});
+
+dashboard_menu()->registerItem([
+    'id' => 'cms-plugins-product-fragrance-notes',
+    'priority' => 6,
+    'parent_id' => 'cms-plugins-ecommerce',
+    'name' => 'Fragrance Profiles',
+    'icon' => 'fa fa-vial',
+    'url' => route('product-fragrance-notes.index'),
+    'permissions' => ['product-fragrance-notes.index'],
+]);
+// --- END: Fragrance Profiles ---
