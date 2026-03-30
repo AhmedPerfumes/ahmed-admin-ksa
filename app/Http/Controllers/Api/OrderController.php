@@ -1744,10 +1744,10 @@ class OrderController extends Controller
 
         $encodedOrderNumber = base64_encode($order->code);
     
-        $returnUrl = "https://howard-nonvisualized-unimpartially.ngrok-free.dev/ahmed-admin-ksa/public/api/payTabsPaymentRedirect?order_number=" . $encodedOrderNumber;
+        $returnUrl = "https://rebbecca-overstudious-nondemonstratively.ngrok-free.dev/ahmed-admin-ksa/public/api/payTabsPaymentRedirect?order_number=" . $encodedOrderNumber;
         // $returnUrl = "https://adminksa.ahmedalmaghribi.com/public/api/payTabsPaymentRedirect?order_number=" . $encodedOrderNumber;
         
-        $callbackUrl = "https://howard-nonvisualized-unimpartially.ngrok-free.dev/ahmed-admin-ksa/public/api/payTabsCallback?order_number=" . $encodedOrderNumber;
+        $callbackUrl = "https://rebbecca-overstudious-nondemonstratively.ngrok-free.dev/ahmed-admin-ksa/public/api/payTabsCallback?order_number=" . $encodedOrderNumber;
         // $callbackUrl = "https://adminksa.ahmedalmaghribi.com/public/api/payTabsCallback?order_number=" . $encodedOrderNumber;
 
         $data = [
@@ -1794,9 +1794,9 @@ class OrderController extends Controller
             // "callback"=> "https://howard-nonvisualized-unimpartially.ngrok-free.dev/ahmed-admin/public/api/payTabsPaymentRedirect?order_number=".base64_encode($order->code)
         ];
 
-        $PROFILE_ID = 124713;
-        $SERVER_KEY = 'SWJ9MH6NW9-JMHGWBTKZT-BWK6GBMRLM';
-        // $SERVER_KEY = 'S6JNLMDMDL-HZM2DZDHLN-GW2NZ6DKK2';
+        $PROFILE_ID = 129318;
+        // $SERVER_KEY = 'STJ9MH6NJD-JMRLNZZ6R9-MN6ZWZZMDL';
+        $SERVER_KEY = 'SWJ9MH6NW9-JMHGWBTKZT-BWK6GBMRLM';//test 
 
         $BASE_URL = 'https://secure.paytabs.sa/payment/request';
 
@@ -1851,13 +1851,51 @@ class OrderController extends Controller
         // die;
     }
 
+    // public function payTabsCallback(Request $request, CreatePaymentForOrderService $createPaymentForOrderService) {
+    //     \Log::info('Paytabs Callback Hit (The Truth):', ['payload' => $request->all()]);
+
+    //     // 1. Identify the Order
+    //     $orderCodeRaw = $request->query('order_number') ?? $request->input('order_number');
+    //     $orderCode = base64_decode($orderCodeRaw);
+
+    //     $order = Order::where('code', $orderCode)->orderBy('id', 'desc')->first();
+
+    //     if (!$order) {
+    //         \Log::error('Paytabs Callback: Order not found', ['code' => $orderCode]);
+    //         return response()->json(['message' => 'Order not found'], 404);
+    //     }
+
+    //     // 2. Extract Data from Nested JSON Structure (Specific to Callback)
+    //     $tranRef = $request->input('tran_ref'); // Top level
+    //     $respStatus = $request->input('payment_result.response_status'); // Nested
+    //     $respMessage = $request->input('payment_result.response_message'); // Nested
+
+    //     // 3. Execute the Heavy Service (Emails, SMS, Coupon)
+    //     // Since this is the only place calling it, we don't need complex double-checks.
+    //     try {
+    //         $createPaymentForOrderService->execute(
+    //             $order,
+    //             'paytabs',
+    //             $respStatus,
+    //             $order->user_id,
+    //             $tranRef,
+    //             $respMessage
+    //         );
+    //         \Log::info("Paytabs Callback Success: Order {$order->code} processed.");
+    //     } catch (\Exception $e) {
+    //         \Log::error("Paytabs Callback Error: " . $e->getMessage());
+    //         return response()->json(['message' => 'Error updating order'], 500);
+    //     }
+
+    //     // 4. Return 200 OK to PayTabs
+    //     return response()->json(['message' => 'Callback received successfully']);
+    // }
     public function payTabsCallback(Request $request, CreatePaymentForOrderService $createPaymentForOrderService) {
-        \Log::info('Paytabs Callback Hit (The Truth):', ['payload' => $request->all()]);
+        \Log::info('Paytabs Server Callback Hit:', $request->all());
 
-        // 1. Identify the Order
-        $orderCodeRaw = $request->query('order_number') ?? $request->input('order_number');
-        $orderCode = base64_decode($orderCodeRaw);
-
+        // 1. Find the order safely using the cart_id from the payload (UAE style)
+        // Ensure this matches how your KSA DB stores the code (with or without the '#')
+        $orderCode = '#' . $request->input('cart_id'); 
         $order = Order::where('code', $orderCode)->orderBy('id', 'desc')->first();
 
         if (!$order) {
@@ -1865,30 +1903,25 @@ class OrderController extends Controller
             return response()->json(['message' => 'Order not found'], 404);
         }
 
-        // 2. Extract Data from Nested JSON Structure (Specific to Callback)
-        $tranRef = $request->input('tran_ref'); // Top level
-        $respStatus = $request->input('payment_result.response_status'); // Nested
-        $respMessage = $request->input('payment_result.response_message'); // Nested
-
-        // 3. Execute the Heavy Service (Emails, SMS, Coupon)
-        // Since this is the only place calling it, we don't need complex double-checks.
+        // 2. Execute the service
         try {
             $createPaymentForOrderService->execute(
                 $order,
                 'paytabs',
-                $respStatus,
+                $request->input('payment_result.response_status'),
                 $order->user_id,
-                $tranRef,
-                $respMessage
+                $request->input('tran_ref'),
+                $request->input('payment_result.response_message'),
+                $request->input('tran_total') // Added the 7th parameter from your UAE code
             );
             \Log::info("Paytabs Callback Success: Order {$order->code} processed.");
         } catch (\Exception $e) {
             \Log::error("Paytabs Callback Error: " . $e->getMessage());
-            return response()->json(['message' => 'Error updating order'], 500);
+            // Even if our service fails, we return 200 so PayTabs doesn't keep retrying
         }
 
-        // 4. Return 200 OK to PayTabs
-        return response()->json(['message' => 'Callback received successfully']);
+        // 3. Always return a 200 JSON response so PayTabs knows you received it
+        return response()->json(['status' => 'received']);
     }
 
     public function payTabsPaymentRedirect(Request $request) {
