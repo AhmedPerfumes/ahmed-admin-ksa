@@ -90,4 +90,7 @@ Route::middleware('customLogs')->group(function () {
 
     Route::withoutMiddleware('customLogs')->get('/products/{product}/reviews', [ApiProductReviewController::class, 'index']);
     Route::withoutMiddleware('customLogs')->post('/reviews', [ApiProductReviewController::class, 'store']);
+
+    Route::withoutMiddleware('restrict.domains')->post('/payTabsPaymentRedirect', [OrderController::class, 'payTabsPaymentRedirect']);
+    Route::withoutMiddleware('restrict.domains')->post('/payTabsCallback', [OrderController::class, 'payTabsCallback']);
 });

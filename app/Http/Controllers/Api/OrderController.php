@@ -519,7 +519,7 @@ class OrderController extends Controller
                         "country"=> "AE",
                         "first_name"=> $request->input('shippingAddress.first_name') ? $request->input('shippingAddress.first_name') : $loggedInCustomer->name,
                         "last_name"=> $request->input('shippingAddress.last_name') ? $request->input('shippingAddress.last_name') : $loggedInCustomer->name,
-                        'customer_order_count'=> Order::where('customer_id', $request->input('customer_id'))->count(),
+                        'customer_order_count'=> Order::where('user_id', $request->input('customer_id'))->count(),
                         'customer_created_at'=> $dateUtc->toIso8601String(),
                         // "zip"=> "54321"
                     ];
@@ -611,6 +611,24 @@ class OrderController extends Controller
                         "last_name"=> $request->input('shippingAddress.last_name') ? $request->input('shippingAddress.last_name') : $request->input('billingAddress.last_name'),
                         'customer_created_at' => Carbon::now()->utc()->format('d-m-Y'),
                         "customer_order_count" => $customerOrderCount,
+                        // "zip"=> "54321"
+                    ];
+                    // $resp = $this->payTabsPayment($request, $data);
+                    // return response()->json([
+                    //     'redirect_url'     => $resp['redirect_url']
+                    // ]);
+                }
+                if($request->input('payment_method') == 'paytabs' || $request->input('payment_method') == 'tamara') {
+                    $data = [
+                        "name"=> $request->input('shippingAddress.first_name') ? $request->input('shippingAddress.first_name').' '.$request->input('shippingAddress.last_name') : $request->input('billingAddress.first_name').' '.$request->input('billingAddress.last_name'),
+                        "email"=> $request->input('shippingAddress.email') ? $request->input('shippingAddress.email') : $request->input('billingAddress.email'),
+                        "phone"=> $request->input('shippingAddress.mobile') ? $request->input('shippingAddress.mobile') : $request->input('billingAddress.mobile'),
+                        "street1"=> $request->input('shippingAddress.area') ? $request->input('shippingAddress.area').' '.$request->input('shippingAddress.building') : $request->input('billingAddress.area').' '.$request->input('billingAddress.building'),
+                        "city"=> $request->input('shippingAddress.emirates') ? $request->input('shippingAddress.emirates') : $request->input('billingAddress.emirates'),
+                        "state"=> $request->input('shippingAddress.emirates') ? $request->input('shippingAddress.emirates') : $request->input('billingAddress.emirates'),
+                        "country"=> "AE",
+                        "first_name"=> $request->input('shippingAddress.first_name') ? $request->input('shippingAddress.first_name') : $request->input('billingAddress.first_name'),
+                        "last_name"=> $request->input('shippingAddress.last_name') ? $request->input('shippingAddress.last_name') : $request->input('billingAddress.last_name'),
                         // "zip"=> "54321"
                     ];
                     // $resp = $this->payTabsPayment($request, $data);
@@ -1518,6 +1536,22 @@ class OrderController extends Controller
                 ActiveCoupon::create($couponData);
             }
 
+            if($request->input('payment_method') == 'paytabs') {
+                $resp = $this->payTabsPayment($request, $data, $order);
+                if($resp['redirect_url']) {
+                    return response()->json([
+                        'message'          => 'Redirecting to Paytabs...',
+                        'order_id'         => $order->code,
+                        'payment_method'   => $request->input('payment_method'),
+                        'total'            => $order->amount,
+                        'sub_total'        => $order->sub_total,
+                        'shipping_amount'  => $order->shipping_amount,
+                        'products'         => $prod,
+                        'redirect_url'     => $resp['redirect_url']
+                    ]);
+                }
+            }
+
             if($request->input('payment_method') == 'payfort') {
                 $resp = $this->payFortPayment($request, $data, $order);
                 // if($resp['redirect_url']) {
@@ -1698,6 +1732,177 @@ class OrderController extends Controller
         );
 
         header('Location: http://localhost:3000/'.$order->lang.'/shop-order-payment-complete?q='.base64_encode($order->code));exit();
+    }
+
+    public function payTabsPayment(Request $request, $shippingData, $order) {
+        $paymentStr = '';
+        foreach ($request->input('products') as $product) {
+            $quantity = $product['quantity'] ? $product['quantity'] : 1;
+            $exisProduct = Product::select('name')->where('ec_products.id', $product['product_id'])->first();
+            $paymentStr .= $exisProduct->name. ' ('.$quantity.'), ';
+        }
+
+        $encodedOrderNumber = base64_encode($order->code);
+    
+        $returnUrl = "https://howard-nonvisualized-unimpartially.ngrok-free.dev/ahmed-admin-ksa/public/api/payTabsPaymentRedirect?order_number=" . $encodedOrderNumber;
+        // $returnUrl = "https://adminksa.ahmedalmaghribi.com/public/api/payTabsPaymentRedirect?order_number=" . $encodedOrderNumber;
+        
+        $callbackUrl = "https://howard-nonvisualized-unimpartially.ngrok-free.dev/ahmed-admin-ksa/public/api/payTabsCallback?order_number=" . $encodedOrderNumber;
+        // $callbackUrl = "https://adminksa.ahmedalmaghribi.com/public/api/payTabsCallback?order_number=" . $encodedOrderNumber;
+
+        $data = [
+            "tran_type"=> "sale",
+            "tran_class"=> "ecom",
+            "cart_id"=> explode('#', $order->code)[1],
+            "cart_currency"=> "SAR",
+            "cart_amount"=> $request->input('finalPrice'),
+            "cart_description"=> $paymentStr,
+            "paypage_lang"=> $request->input('locale'),
+            "customer_details"=> [
+                "name"=> $request->input('billingAddress.first_name').' '.$request->input('billingAddress.last_name'),
+                "email"=> $request->input('billingAddress.email'),
+                "phone"=> $request->input('billingAddress.mobile'),
+                "street1"=> $request->input('billingAddress.area').' '.$request->input('billingAddress.building'),
+                "city"=> $request->input('billingAddress.province'),
+                "state"=> $request->input('billingAddress.province'),
+                "country"=> "SA",
+                // "zip"=> "12345"
+            ],
+            "shipping_details"=> [
+                "name"=> $shippingData['name'],
+                "email"=> $shippingData['email'],
+                "phone"=> $shippingData['phone'],
+                "street1"=> $shippingData['street1'],
+                "city"=> $shippingData['city'],
+                "state"=> $shippingData['state'],
+                "country"=> "SA",
+                // "zip"=> "54321"
+            ],
+            // "card_discounts" => [
+            //     [
+            //         "discount_cards" => "41111,520000",
+            //         "discount_amount" => "30.00",
+            //         "discount_title" => "30.00 AED discount on cards starts with 41111, 520000",
+            //     ]
+            // ],
+
+            "return" => $returnUrl,   
+            "callback" => $callbackUrl
+
+            // "callback"=> "https://admin.ahmedalmaghribi.com/public/api/payTabsPaymentRedirect?order_number=".base64_encode($order->code),
+            // "return"=> "https://howard-nonvisualized-unimpartially.ngrok-free.dev/ahmed-admin/public/api/payTabsPaymentRedirect?order_number=".base64_encode($order->code)
+            // "callback"=> "https://howard-nonvisualized-unimpartially.ngrok-free.dev/ahmed-admin/public/api/payTabsPaymentRedirect?order_number=".base64_encode($order->code)
+        ];
+
+        $PROFILE_ID = 124713;
+        $SERVER_KEY = 'SWJ9MH6NW9-JMHGWBTKZT-BWK6GBMRLM';
+        // $SERVER_KEY = 'S6JNLMDMDL-HZM2DZDHLN-GW2NZ6DKK2';
+
+        $BASE_URL = 'https://secure.paytabs.sa/payment/request';
+
+        $data['profile_id'] = $PROFILE_ID;
+        \Log::info("Paytabs Payload: ". json_encode($data));
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $BASE_URL,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => json_encode($data, true),
+            CURLOPT_HTTPHEADER => array(
+                'authorization:' . $SERVER_KEY,
+                'Content-Type:application/json'
+            ),
+            // CURLOPT_SSL_VERIFYPEER => false,  // 👈 Add this
+            // CURLOPT_SSL_VERIFYHOST => false,  // 👈 And this
+            // CURLOPT_SSL_VERIFYPEER => true,
+            // CURLOPT_CAINFO => base_path('certs/cacert.pem'),
+        ));
+
+        $response = json_decode(curl_exec($curl), true);
+        // echo "<pre>"; print_r($response);die;
+        curl_close($curl);
+        \Log::info("Paytabs Response: ". json_encode($response));
+        // print_r($response);die;
+        return $response;
+
+        // $responseRaw = curl_exec($curl);
+        // curl_close($curl);
+
+        // echo "Raw response:\n";
+        // var_dump($responseRaw); // Check if there is anything returned at all
+        // $response = json_decode($responseRaw, true);
+        // print_r($response); // Still might be null if response is not valid JSON
+        // die;
+
+        // $responseRaw = curl_exec($curl);
+
+        // if (curl_errno($curl)) {
+        //     echo 'Curl error: ' . curl_error($curl) . "\n";
+        // }
+
+        // $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        // echo "HTTP Status Code: $httpCode\n";
+
+        // curl_close($curl);
+
+        // die;
+    }
+
+    public function payTabsCallback(Request $request, CreatePaymentForOrderService $createPaymentForOrderService) {
+        \Log::info('Paytabs Callback Hit (The Truth):', ['payload' => $request->all()]);
+
+        // 1. Identify the Order
+        $orderCodeRaw = $request->query('order_number') ?? $request->input('order_number');
+        $orderCode = base64_decode($orderCodeRaw);
+
+        $order = Order::where('code', $orderCode)->orderBy('id', 'desc')->first();
+
+        if (!$order) {
+            \Log::error('Paytabs Callback: Order not found', ['code' => $orderCode]);
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        // 2. Extract Data from Nested JSON Structure (Specific to Callback)
+        $tranRef = $request->input('tran_ref'); // Top level
+        $respStatus = $request->input('payment_result.response_status'); // Nested
+        $respMessage = $request->input('payment_result.response_message'); // Nested
+
+        // 3. Execute the Heavy Service (Emails, SMS, Coupon)
+        // Since this is the only place calling it, we don't need complex double-checks.
+        try {
+            $createPaymentForOrderService->execute(
+                $order,
+                'paytabs',
+                $respStatus,
+                $order->user_id,
+                $tranRef,
+                $respMessage
+            );
+            \Log::info("Paytabs Callback Success: Order {$order->code} processed.");
+        } catch (\Exception $e) {
+            \Log::error("Paytabs Callback Error: " . $e->getMessage());
+            return response()->json(['message' => 'Error updating order'], 500);
+        }
+
+        // 4. Return 200 OK to PayTabs
+        return response()->json(['message' => 'Callback received successfully']);
+    }
+
+    public function payTabsPaymentRedirect(Request $request) {
+        \Log::info('Paytabs Return URL Hit (Redirect Only)');
+
+        // We only need the order code to build the URL
+        $orderCode = base64_decode($request->query('order_number'));
+        
+        // Note: The order status might still be "Pending" here if the Callback hasn't arrived yet.
+        // The frontend page you are building later should handle checking the status via API.
+        
+        // Simple Redirect
+        header('Location: http://localhost:3000/en/shop-order-payment-complete?q='.base64_encode($orderCode));
+        exit();
     }
 
     public function tabbyPayment(Request $request, $shippingData, $order, $prods) {
