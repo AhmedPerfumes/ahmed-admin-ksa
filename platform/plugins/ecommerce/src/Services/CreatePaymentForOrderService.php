@@ -74,6 +74,7 @@ class CreatePaymentForOrderService
                 'customer_type' => Customer::class,
             ];
         }
+        \Log::info('Order Payment Data:', ['data' => $data]);
 
         $payment = Payment::query()->create($data);
 

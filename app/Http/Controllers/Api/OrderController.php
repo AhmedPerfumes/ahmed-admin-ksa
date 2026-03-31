@@ -1794,8 +1794,9 @@ class OrderController extends Controller
             // "callback"=> "https://howard-nonvisualized-unimpartially.ngrok-free.dev/ahmed-admin/public/api/payTabsPaymentRedirect?order_number=".base64_encode($order->code)
         ];
 
-        $PROFILE_ID = 129318;
+        // $PROFILE_ID = 129318;
         // $SERVER_KEY = 'STJ9MH6NJD-JMRLNZZ6R9-MN6ZWZZMDL';
+           $PROFILE_ID=124713;//test
         $SERVER_KEY = 'SWJ9MH6NW9-JMHGWBTKZT-BWK6GBMRLM';//test 
 
         $BASE_URL = 'https://secure.paytabs.sa/payment/request';
