@@ -39,6 +39,7 @@ Route::middleware('customLogs')->group(function () {
     Route::get('/bogoProducts', [ProductController::class, 'bogoProducts']);
 
     Route::withoutMiddleware('customLogs')->match(['get', 'post'], '/specialOffers', [ProductController::class, 'specialOffers']);
+    Route::withoutMiddleware('customLogs')->match(['get', 'post'], '/getBestSelling', [ProductController::class, 'getBestSelling']);
 
     // Product Category Routes
     Route::withoutMiddleware('customLogs')->post('/productCategories', [ProductCategoryController::class, 'getProductCategories']);

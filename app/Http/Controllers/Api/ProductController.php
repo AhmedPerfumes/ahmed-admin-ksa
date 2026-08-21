@@ -2376,4 +2376,154 @@ class ProductController extends Controller
 
         return $products;
     }
+
+    public function getBestSelling(Request $request)
+    {
+        try {
+            $now = \Carbon\Carbon::now();
+
+            // 1. Get all published parent categories
+            $categories = ProductCategory::where('parent_id', 0)
+                ->where('status', 'published')
+                ->get(['id', 'name']);
+
+            // 2. Aggregate sales map
+            $salesMap = DB::table('ec_order_product')
+                ->select('product_id', DB::raw('SUM(qty) as total_sales'))
+                ->groupBy('product_id')
+                ->pluck('total_sales', 'product_id')
+                ->toArray();
+
+            // 3. Active discount promotions map
+            $activeDiscounts = Promotion::where('isDeleted', false)
+                ->where('type', 'discount')
+                ->where('start_date', '<=', $now)
+                ->where('end_date', '>=', $now)
+                ->with(['discountRules.individualRules', 'discountRules.products'])
+                ->get();
+
+            $individualDiscountMap = [];
+            $groupDiscountRules = [];
+            foreach ($activeDiscounts as $promo) {
+                if ($promo->discountRules) {
+                    foreach ($promo->discountRules as $rule) {
+                        if ($rule->apply_to === 'individual') {
+                            if ($rule->individualRules) {
+                                foreach ($rule->individualRules as $ind) {
+                                    $individualDiscountMap[$ind->product_id] = [
+                                        'rule' => $ind,
+                                        'promo' => $promo,
+                                    ];
+                                }
+                            }
+                        } elseif ($rule->apply_to === 'group') {
+                            if ($rule->products) {
+                                foreach ($rule->products as $gp) {
+                                    $groupDiscountRules[$gp->product_id] = [
+                                        'percentage' => $rule->percentage,
+                                        'promo' => $promo,
+                                    ];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            $result = [];
+
+            foreach ($categories as $category) {
+                $products = DB::table('ec_product_category_product')
+                    ->select(
+                        DB::raw('CAST(ec_products.price AS DECIMAL(8,2)) as price'),
+                        'ec_products.id as product_id',
+                        'ec_products.name as product_name',
+                        'ec_products.name_ar as product_name_ar',
+                        'ec_product_categories.id as category_id',
+                        'ec_product_categories.name as category_name',
+                        'ec_products.image',
+                        'ec_products.images',
+                        'ec_product_collections.name as collection_name',
+                        'ec_products.description',
+                        'ec_products.quantity as product_qty',
+                        'ec_product_labels.name as label_name',
+                        'ec_product_labels.color as label_color',
+                        'ec_products.sale_price'
+                    )
+                    ->join('ec_products', 'ec_product_category_product.product_id', '=', 'ec_products.id')
+                    ->join('ec_product_categories', 'ec_product_category_product.category_id', '=', 'ec_product_categories.id')
+                    ->leftJoin('ec_product_collection_products', 'ec_product_collection_products.product_id', '=', 'ec_products.id')
+                    ->leftJoin('ec_product_collections', 'ec_product_collection_products.product_collection_id', '=', 'ec_product_collections.id')
+                    ->leftJoin('ec_product_label_products', 'ec_product_label_products.product_id', '=', 'ec_products.id')
+                    ->leftJoin('ec_product_labels', 'ec_product_label_products.product_label_id', '=', 'ec_product_labels.id')
+                    ->where('ec_product_category_product.category_id', $category->id)
+                    ->where('ec_products.status', 'published')
+                    ->get()
+                    ->unique('product_id')
+                    ->values();
+
+                $categoryProducts = [];
+
+                foreach ($products as $val) {
+                    $val->sales = isset($salesMap[$val->product_id]) ? intval($salesMap[$val->product_id]) : 0;
+
+                    $val->subcategory = DB::table('ec_product_categories')
+                        ->select('name as subcategory_name')
+                        ->join('ec_product_category_product', 'ec_product_category_product.category_id', '=', 'ec_product_categories.id')
+                        ->where('product_id', $val->product_id)
+                        ->where('ec_product_categories.parent_id', '!=', 0)
+                        ->first();
+
+                    // Attach discount if exists
+                    $discountObj = null;
+                    if (isset($individualDiscountMap[$val->product_id])) {
+                        $ind = $individualDiscountMap[$val->product_id]['rule'];
+                        $promo = $individualDiscountMap[$val->product_id]['promo'];
+                        $discountObj = (object) [
+                            'value' => (int) $ind->value,
+                            'discount_type' => $ind->discount_type,
+                            'final_price' => $ind->final_price ? (float) $ind->final_price : null,
+                            'product_price' => $ind->product_price ? (float) $ind->product_price : (float) $val->price,
+                            'discount_amount' => $ind->discount_amount ? (float) $ind->discount_amount : null,
+                            'start_date' => $promo->start_date ? $promo->start_date->format('Y-m-d H:i:s') : null,
+                            'end_date' => $promo->end_date ? $promo->end_date->format('Y-m-d H:i:s') : null,
+                        ];
+                    } elseif (isset($groupDiscountRules[$val->product_id])) {
+                        $pct = (float) $groupDiscountRules[$val->product_id]['percentage'];
+                        $promo = $groupDiscountRules[$val->product_id]['promo'];
+                        $basePrice = (float) $val->price;
+                        $finalPrice = round($basePrice - ($basePrice * $pct / 100), 2);
+                        $discountAmount = round($basePrice * $pct / 100, 2);
+                        $discountObj = (object) [
+                            'value' => (int) $pct,
+                            'discount_type' => 'percent',
+                            'final_price' => $finalPrice,
+                            'product_price' => $basePrice,
+                            'discount_amount' => $discountAmount,
+                            'start_date' => $promo->start_date ? $promo->start_date->format('Y-m-d H:i:s') : null,
+                            'end_date' => $promo->end_date ? $promo->end_date->format('Y-m-d H:i:s') : null,
+                        ];
+                    }
+
+                    $val->discount = $discountObj;
+                    $categoryProducts[] = $val;
+                }
+
+                // Sort category products by sales descending
+                usort($categoryProducts, function ($a, $b) {
+                    if ($b->sales === $a->sales) {
+                        return $b->product_id <=> $a->product_id;
+                    }
+                    return $b->sales <=> $a->sales;
+                });
+
+                $result[$category->name] = $categoryProducts;
+            }
+
+            return response()->json($result, 200);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching best selling products: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([], 500);
+        }
+    }
 }
