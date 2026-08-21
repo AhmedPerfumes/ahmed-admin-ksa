@@ -2116,5 +2116,223 @@ class ProductController extends Controller
         return 'least_expensive';
     }
 
-   
+    public function specialOffers(Request $request)
+    {
+        try {
+            $now = \Carbon\Carbon::now();
+
+            // Fetch active promotions that have not been deleted and are currently active
+            $activePromotions = Promotion::where('isDeleted', false)
+                ->where('start_date', '<=', $now)
+                ->where('end_date', '>=', $now)
+                ->with([
+                    'discountRules.individualRules',
+                    'discountRules.products',
+                    'buyXGetYRules.products',
+                    'focRules.products',
+                ])
+                ->orderBy('start_date', 'desc')
+                ->get();
+
+            $resultPromotions = [];
+
+            foreach ($activePromotions as $promotion) {
+                $productIds = [];
+                $individualDiscountMap = [];
+                $groupPercentage = null;
+
+                if ($promotion->type === 'discount') {
+                    if ($promotion->discountRules) {
+                        foreach ($promotion->discountRules as $rule) {
+                            if ($rule->apply_to === 'individual') {
+                                if ($rule->individualRules) {
+                                    foreach ($rule->individualRules as $ind) {
+                                        $productIds[] = $ind->product_id;
+                                        $individualDiscountMap[$ind->product_id] = $ind;
+                                    }
+                                }
+                            } elseif ($rule->apply_to === 'group') {
+                                $groupPercentage = $rule->percentage;
+                                if ($rule->products) {
+                                    foreach ($rule->products as $p) {
+                                        $productIds[] = $p->product_id;
+                                    }
+                                }
+                            } elseif ($rule->apply_to === 'all') {
+                                $groupPercentage = $rule->percentage;
+                                $allIds = DB::table('ec_products')->where('status', 'published')->pluck('id')->toArray();
+                                $productIds = array_merge($productIds, $allIds);
+                            }
+                        }
+                    }
+                } elseif ($promotion->type === 'buy_x_get_y' || $promotion->type === 'bogo') {
+                    if ($promotion->buyXGetYRules) {
+                        foreach ($promotion->buyXGetYRules as $rule) {
+                            if ($rule->products) {
+                                foreach ($rule->products as $p) {
+                                    $productIds[] = $p->product_id;
+                                }
+                            }
+                        }
+                    }
+                } elseif ($promotion->type === 'foc') {
+                    if ($promotion->focRules) {
+                        foreach ($promotion->focRules as $rule) {
+                            if ($rule->products) {
+                                foreach ($rule->products as $p) {
+                                    $productIds[] = $p->product_id;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                $productIds = array_values(array_unique(array_filter($productIds)));
+
+                if (empty($productIds)) {
+                    continue;
+                }
+
+                // Query products with category details
+                $products = DB::table('ec_product_category_product')
+                    ->select(
+                        DB::raw('CAST(ec_products.price AS DECIMAL(8,2)) as price'),
+                        'ec_products.id as product_id',
+                        'ec_products.name as product_name',
+                        'ec_products.name_ar as product_name_ar',
+                        'ec_product_categories.id as category_id',
+                        'ec_product_categories.name as category_name',
+                        'ec_products.image',
+                        'ec_products.images',
+                        'ec_product_collections.name as collection_name',
+                        'ec_products.description',
+                        'ec_products.quantity as product_qty',
+                        'ec_product_labels.name as label_name',
+                        'ec_product_labels.color as label_color',
+                        'ec_products.sale_price'
+                    )
+                    ->join('ec_products', 'ec_product_category_product.product_id', '=', 'ec_products.id')
+                    ->leftJoin('ec_product_categories', 'ec_product_category_product.category_id', '=', 'ec_product_categories.id')
+                    ->leftJoin('ec_product_collection_products', 'ec_product_collection_products.product_id', '=', 'ec_products.id')
+                    ->leftJoin('ec_product_collections', 'ec_product_collection_products.product_collection_id', '=', 'ec_product_collections.id')
+                    ->leftJoin('ec_product_label_products', 'ec_product_label_products.product_id', '=', 'ec_products.id')
+                    ->leftJoin('ec_product_labels', 'ec_product_label_products.product_label_id', '=', 'ec_product_labels.id')
+                    ->whereIn('ec_products.id', $productIds)
+                    ->where('ec_products.status', 'published')
+                    ->where('ec_product_categories.status', 'published')
+                    ->where('ec_product_categories.parent_id', 0)
+                    ->get();
+
+                // If some products were not directly under parent_id 0, fallback query from ec_products directly
+                $foundProductIds = $products->pluck('product_id')->toArray();
+                $missingProductIds = array_diff($productIds, $foundProductIds);
+
+                if (!empty($missingProductIds)) {
+                    $missingProducts = DB::table('ec_products')
+                        ->select(
+                            DB::raw('CAST(ec_products.price AS DECIMAL(8,2)) as price'),
+                            'ec_products.id as product_id',
+                            'ec_products.name as product_name',
+                            'ec_products.name_ar as product_name_ar',
+                            'ec_products.image',
+                            'ec_products.images',
+                            'ec_products.description',
+                            'ec_products.quantity as product_qty',
+                            'ec_products.sale_price'
+                        )
+                        ->whereIn('ec_products.id', $missingProductIds)
+                        ->where('ec_products.status', 'published')
+                        ->get();
+
+                    foreach ($missingProducts as $mp) {
+                        $cat = DB::table('ec_product_categories')
+                            ->select('ec_product_categories.id as category_id', 'ec_product_categories.name as category_name')
+                            ->join('ec_product_category_product', 'ec_product_category_product.category_id', '=', 'ec_product_categories.id')
+                            ->where('ec_product_category_product.product_id', $mp->product_id)
+                            ->where('ec_product_categories.parent_id', 0)
+                            ->first();
+
+                        $mp->category_id = $cat ? $cat->category_id : null;
+                        $mp->category_name = $cat ? $cat->category_name : 'Fragrances';
+                        $mp->collection_name = null;
+                        $mp->label_name = null;
+                        $mp->label_color = null;
+
+                        $products->push($mp);
+                    }
+                }
+
+                // Deduplicate by product_id
+                $products = $products->unique('product_id');
+
+                $promoProducts = [];
+                foreach ($products as $val) {
+                    // Subcategory
+                    $val->subcategory = DB::table('ec_product_categories')
+                        ->select('name as subcategory_name')
+                        ->join('ec_product_category_product', 'ec_product_category_product.category_id', '=', 'ec_product_categories.id')
+                        ->where('product_id', $val->product_id)
+                        ->where('ec_product_categories.parent_id', '!=', 0)
+                        ->first();
+
+                    // Discount object
+                    $discountObj = null;
+                    if (isset($individualDiscountMap[$val->product_id])) {
+                        $ind = $individualDiscountMap[$val->product_id];
+                        $discountObj = (object) [
+                            'value' => (int) $ind->value,
+                            'discount_type' => $ind->discount_type,
+                            'final_price' => $ind->final_price ? (float) $ind->final_price : null,
+                            'product_price' => $ind->product_price ? (float) $ind->product_price : (float) $val->price,
+                            'discount_amount' => $ind->discount_amount ? (float) $ind->discount_amount : null,
+                            'start_date' => $promotion->start_date ? $promotion->start_date->format('Y-m-d H:i:s') : null,
+                            'end_date' => $promotion->end_date ? $promotion->end_date->format('Y-m-d H:i:s') : null,
+                        ];
+                    } elseif ($groupPercentage !== null) {
+                        $pct = (float) $groupPercentage;
+                        $basePrice = (float) $val->price;
+                        $finalPrice = round($basePrice - ($basePrice * $pct / 100), 2);
+                        $discountAmount = round($basePrice * $pct / 100, 2);
+                        $discountObj = (object) [
+                            'value' => (int) $pct,
+                            'discount_type' => 'percent',
+                            'final_price' => $finalPrice,
+                            'product_price' => $basePrice,
+                            'discount_amount' => $discountAmount,
+                            'start_date' => $promotion->start_date ? $promotion->start_date->format('Y-m-d H:i:s') : null,
+                            'end_date' => $promotion->end_date ? $promotion->end_date->format('Y-m-d H:i:s') : null,
+                        ];
+                    }
+
+                    $val->discount = $discountObj;
+                    $promoProducts[] = $val;
+                }
+
+                if (!empty($promoProducts)) {
+                    $resultPromotions[] = [
+                        'id' => $promotion->id,
+                        'name' => $promotion->name,
+                        'type' => $promotion->type,
+                        'description' => $promotion->description,
+                        'start_date' => $promotion->start_date ? $promotion->start_date->format('Y-m-d H:i:s') : null,
+                        'end_date' => $promotion->end_date ? $promotion->end_date->format('Y-m-d H:i:s') : null,
+                        'products' => $promoProducts,
+                    ];
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'promotions' => $resultPromotions,
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching Special Offers: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to fetch special offers',
+                'message' => $e->getMessage(),
+                'promotions' => [],
+            ], 500);
+        }
+    }
 }
