@@ -47,6 +47,8 @@ class Product extends BaseModel
         'description_ar',
         'content',
         'content_ar',
+        'seo_content',
+        'seo_content_ar',
         'fragrance_notes',
         'fragrance_notes_ar',
         'image', // Featured image
