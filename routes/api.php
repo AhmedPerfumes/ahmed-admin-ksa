@@ -8,6 +8,11 @@ use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\TabbyCronController;
 use App\Http\Controllers\Api\ProductReviewController as ApiProductReviewController;
+use App\Http\Controllers\Api\TrackerController;
+
+// Standalone Tracker Collection Endpoint (No Auth, No Custom Logging Middleware, 20 req/min rate limit)
+Route::post('/tracker/collect', [TrackerController::class, 'collect'])->middleware('throttle:20,1');
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -73,8 +78,10 @@ Route::middleware('customLogs')->group(function () {
     Route::post('/contact', [ContactController::class, 'contact']);
     Route::post('/campaign', [ContactController::class, 'campaign']);
 
-    // Cron Route
+    // Cron Routes
     Route::get('/tabbyAllPayments', [TabbyCronController::class, 'tabbyAllPayments']);
+    Route::get('/trackerAggregate', [TrackerController::class, 'aggregateStats']);
+    Route::get('/cartRecovery', [TrackerController::class, 'runCartRecovery']);
 
     Route::post('/customerDetails', [OrderController::class, 'customerDetails']);
     Route::post('/customerUpdate', [OrderController::class, 'customerUpdate']);

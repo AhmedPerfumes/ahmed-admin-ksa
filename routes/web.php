@@ -68,3 +68,39 @@ dashboard_menu()->registerItem([
     'permissions' => ['product-fragrance-notes.index'],
 ]);
 // --- END: Fragrance Profiles ---
+
+// --- START: Analytics Dashboard ---
+use App\Http\Controllers\Admin\AnalyticsController;
+
+Route::group(['middleware' => ['web', 'auth']], function () {
+    // Main dashboard — requires analytics.dashboard permission
+    Route::get('/admin/analytics', [AnalyticsController::class, 'index'])
+        ->name('analytics.dashboard');
+
+    // Visitor journey — requires analytics.visitor-journey permission
+    Route::get('/admin/analytics/visitor-journey/{visitor_id}', [AnalyticsController::class, 'visitorJourney'])
+        ->name('analytics.visitor-journey');
+
+    // Recovery email — requires analytics.dashboard permission (write action)
+    Route::post('/admin/analytics/send-recovery-email', [AnalyticsController::class, 'sendRecoveryEmail'])
+        ->name('analytics.send-recovery-email');
+
+    // Recovery SMS — requires analytics.dashboard permission
+    Route::post('/admin/analytics/send-recovery-sms', [AnalyticsController::class, 'sendRecoverySms'])
+        ->name('analytics.send-recovery-sms');
+
+    // AJAX load-more events — requires analytics.dashboard permission
+    Route::get('/admin/analytics/load-more-events', [AnalyticsController::class, 'loadMoreEvents'])
+        ->name('analytics.load-more-events');
+});
+
+dashboard_menu()->registerItem([
+    'id' => 'cms-plugins-analytics-dashboard',
+    'priority' => 7,
+    'parent_id' => 'cms-plugins-ecommerce',
+    'name' => 'Analytics Dashboard',
+    'icon' => 'fa fa-chart-line',
+    'url' => fn() => route('analytics.dashboard'),
+    'permissions' => ['analytics.dashboard'],
+]);
+// --- END: Analytics Dashboard ---

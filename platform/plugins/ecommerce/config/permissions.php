@@ -574,4 +574,18 @@ return [
         'flag' => 'product-categories.import',
         'parent_flag' => 'tools.data-synchronize',
     ],
+
+    /**
+     * Analytics Dashboard
+     */
+    [
+        'name' => 'Analytics Dashboard',
+        'flag' => 'analytics.dashboard',
+        'parent_flag' => 'plugins.ecommerce',
+    ],
+    [
+        'name' => 'View Visitor Journey',
+        'flag' => 'analytics.visitor-journey',
+        'parent_flag' => 'analytics.dashboard',
+    ],
 ];

@@ -12,7 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->command('tracker:aggregate')->dailyAt('02:00');
+        $schedule->command('analytics:cart-recovery')->everyTwoHours();
     }
 
     /**
