@@ -85,6 +85,7 @@ Route::middleware('customLogs')->group(function () {
     Route::post('/customerAddressUpdate', [OrderController::class, 'customerAddressUpdate']);
     Route::get('/customerOrders', [OrderController::class, 'customerOrders']);
     Route::post('/customerOrderDetails', [OrderController::class, 'customerOrderDetails']);
+    Route::post('/customerCancelOrder', [OrderController::class, 'customerCancelOrder']);
     Route::post('/customerCouponDetails', [OrderController::class, 'customerCouponDetails']);
     Route::post('/customerPasswordCheck', [OrderController::class, 'customerPasswordCheck']);
 

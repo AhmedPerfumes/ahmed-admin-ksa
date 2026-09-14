@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\ActiveCoupon;
 use App\Models\Promotion;
 use Illuminate\Support\Facades\Log;
+use Botble\Ecommerce\Facades\OrderHelper;
 
 class OrderController extends Controller
 {
@@ -3183,6 +3184,130 @@ class OrderController extends Controller
             'order_products' => $order_products,
             'order_address' => $order_address,
         ]);
+    }
+
+    public function customerCancelOrder(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'order_id'    => 'required',
+            'customer_id' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first() ?: 'Validation error',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $orderId = $request->input('order_id');
+        $customerId = $request->input('customer_id');
+        $reason = $request->input('reason', '');
+        $reasonDescription = $request->input('reason_description', '');
+
+        $order = Order::where('id', $orderId)
+            ->where('user_id', $customerId)
+            ->with(['address', 'products.product'])
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found'
+            ], 404);
+        }
+
+        if ($order->status == OrderStatusEnum::CANCELED || $order->status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order is already cancelled'
+            ], 400);
+        }
+
+        if ($order->status == OrderStatusEnum::COMPLETED || $order->status === 'completed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Completed orders cannot be cancelled'
+            ], 400);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $order->status = OrderStatusEnum::CANCELED;
+            $order->is_confirmed = true;
+            if ($reason) {
+                $order->cancellation_reason = $reason;
+                $order->cancellation_reason_description = $reasonDescription;
+            }
+            $order->save();
+
+            // Fire cancellation event if class exists
+            if (class_exists(\Botble\Ecommerce\Events\OrderCancelledEvent::class)) {
+                event(new \Botble\Ecommerce\Events\OrderCancelledEvent($order, $reason, $reasonDescription));
+            }
+
+            // Restore product quantities to stock
+            foreach ($order->products as $orderProduct) {
+                $product = $orderProduct->product;
+                if ($product) {
+                    $product->quantity += $orderProduct->qty;
+                    $product->save();
+
+                    if ($product->is_variation) {
+                        $originalProduct = $product->original_product;
+                        if ($originalProduct && $originalProduct->id != $product->id) {
+                            $originalProduct->quantity += $orderProduct->qty;
+                            $originalProduct->save();
+                        }
+                    }
+
+                    if (class_exists(\Botble\Ecommerce\Events\ProductQuantityUpdatedEvent::class)) {
+                        event(new \Botble\Ecommerce\Events\ProductQuantityUpdatedEvent($product));
+                    }
+                }
+            }
+
+            // Restore coupon if used
+            if ($order->coupon_code && $order->user_id) {
+                try {
+                    Discount::getFacadeRoot()->afterOrderCancelled($order->coupon_code, $order->user_id);
+                } catch (\Throwable $th) {
+                    Log::warning('Discount reversal failed on cancel: ' . $th->getMessage());
+                }
+            }
+
+            // Add order history log
+            $customerName = optional($order->address)->name ?: (optional($order->user)->name ?: 'Customer');
+            $reasonText = !empty($reasonDescription) ? ($reason . ' - ' . $reasonDescription) : ($reason ?: 'Customer requested');
+            $description = "Order was cancelled by customer {$customerName} with reason: {$reasonText}";
+
+            OrderHistory::query()->create([
+                'action' => OrderHistoryActionEnum::CANCEL_ORDER,
+                'description' => $description,
+                'order_id' => $order->getKey(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order cancelled successfully'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Order cancellation failed: ' . $e->getMessage(), [
+                'order_id' => $orderId,
+                'customer_id' => $customerId,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to cancel order: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
 
