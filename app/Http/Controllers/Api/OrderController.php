@@ -3179,7 +3179,7 @@ class OrderController extends Controller
             ->take($pageSize)
             ->get();
 
-        // Eager load order products for preview thumbnails with image fallbacks
+        // Eager load order products with fallback to ec_products.image
         $orderIds = $orders->pluck('id')->toArray();
         $productsByOrder = OrderProduct::whereIn('ec_order_product.order_id', $orderIds)
             ->leftJoin('ec_products', 'ec_order_product.product_id', '=', 'ec_products.id')
@@ -3189,30 +3189,18 @@ class OrderController extends Controller
                 'ec_order_product.product_id',
                 'ec_order_product.product_name',
                 DB::raw('COALESCE(NULLIF(ec_order_product.product_image, ""), ec_products.image) as product_image'),
-                'ec_products.images as product_images',
                 'ec_order_product.price',
                 'ec_order_product.qty',
                 'ec_order_product.gross_amount',
                 'ec_order_product.is_gift'
             )
-            ->get();
-
-        $productsByOrder->transform(function ($item) {
-            if (empty($item->product_image) && !empty($item->product_images)) {
-                $decoded = json_decode($item->product_images, true);
-                if (is_array($decoded) && !empty($decoded[0])) {
-                    $item->product_image = $decoded[0];
-                }
-            }
-            return $item;
-        });
-
-        $groupedProducts = $productsByOrder->groupBy('order_id');
+            ->get()
+            ->groupBy('order_id');
 
         // Add link and products
-        $orders->transform(function ($order) use ($groupedProducts) {
+        $orders->transform(function ($order) use ($productsByOrder) {
             $order->link = '/order-tracking';
-            $order->products = $groupedProducts->get($order->id, collect())->values();
+            $order->products = $productsByOrder->get($order->id, collect())->values();
             return $order;
         });
 
@@ -3236,11 +3224,9 @@ class OrderController extends Controller
             ->leftJoin('ec_products', 'ec_order_product.product_id', '=', 'ec_products.id')
             ->select(
                 'ec_order_product.id',
-                'ec_order_product.order_id',
                 'ec_order_product.product_id',
                 'ec_order_product.product_name',
                 DB::raw('COALESCE(NULLIF(ec_order_product.product_image, ""), ec_products.image) as product_image'),
-                'ec_products.images as product_images',
                 'ec_order_product.price',
                 'ec_order_product.qty',
                 'ec_order_product.total_amount',
@@ -3256,16 +3242,6 @@ class OrderController extends Controller
         if($order_products->isEmpty()) {
             return response()->json(['message' => 'Order Products Not Found']);
         }
-
-        $order_products->transform(function ($item) {
-            if (empty($item->product_image) && !empty($item->product_images)) {
-                $decoded = json_decode($item->product_images, true);
-                if (is_array($decoded) && !empty($decoded[0])) {
-                    $item->product_image = $decoded[0];
-                }
-            }
-            return $item;
-        });
 
         $order_address = OrderAddress::select('id', 'name', 'phone', 'email', 'state', 'city', 'address')->where('order_id', $request->input('order_id'))->get();
 
