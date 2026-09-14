@@ -3117,14 +3117,8 @@ class OrderController extends Controller
         }
 
         if ($request->filled('status')) {
-            $statuses = array_filter(array_map('trim', explode(',', $request->status)));
-            if (count($statuses) > 1) {
-                $filteredQuery->whereIn('ec_orders.status', $statuses);
-                $dataQuery->whereIn('ec_orders.status', $statuses);
-            } elseif (count($statuses) === 1) {
-                $filteredQuery->where('ec_orders.status', 'like', '%' . $statuses[0] . '%');
-                $dataQuery->where('ec_orders.status', 'like', '%' . $statuses[0] . '%');
-            }
+            $filteredQuery->where('ec_orders.status', 'like', '%' . $request->status . '%');
+            $dataQuery->where('ec_orders.status', 'like', '%' . $request->status . '%');
         }
 
         if ($request->filled('created_at')) {
@@ -3159,8 +3153,8 @@ class OrderController extends Controller
             'payments.payment_channel' => 'payments.payment_channel',
         ];
 
-        $rawOrderBy = $request->input('orderBy', 'created_at');
-        $orderBy = $columnMap[$rawOrderBy] ?? 'ec_orders.created_at';
+        $rawOrderBy = $request->input('orderBy', 'ec_orders.id');
+        $orderBy = $columnMap[$rawOrderBy] ?? 'ec_orders.id';
         $orderDir = strtolower($request->input('orderDir', 'desc')) === 'asc' ? 'asc' : 'desc';
 
         $dataQuery->orderBy($orderBy, $orderDir);
@@ -3179,28 +3173,9 @@ class OrderController extends Controller
             ->take($pageSize)
             ->get();
 
-        // Eager load order products with fallback to ec_products.image
-        $orderIds = $orders->pluck('id')->toArray();
-        $productsByOrder = OrderProduct::whereIn('ec_order_product.order_id', $orderIds)
-            ->leftJoin('ec_products', 'ec_order_product.product_id', '=', 'ec_products.id')
-            ->select(
-                'ec_order_product.id',
-                'ec_order_product.order_id',
-                'ec_order_product.product_id',
-                'ec_order_product.product_name',
-                DB::raw('COALESCE(NULLIF(ec_order_product.product_image, ""), ec_products.image) as product_image'),
-                'ec_order_product.price',
-                'ec_order_product.qty',
-                'ec_order_product.gross_amount',
-                'ec_order_product.is_gift'
-            )
-            ->get()
-            ->groupBy('order_id');
-
-        // Add link and products
-        $orders->transform(function ($order) use ($productsByOrder) {
+        // Add link column
+        $orders->transform(function ($order) {
             $order->link = '/order-tracking';
-            $order->products = $productsByOrder->get($order->id, collect())->values();
             return $order;
         });
 
@@ -3220,24 +3195,7 @@ class OrderController extends Controller
             return response()->json($validator->errors());
         }
 
-        $order_products = OrderProduct::where('ec_order_product.order_id', $request->input('order_id'))
-            ->leftJoin('ec_products', 'ec_order_product.product_id', '=', 'ec_products.id')
-            ->select(
-                'ec_order_product.id',
-                'ec_order_product.product_id',
-                'ec_order_product.product_name',
-                DB::raw('COALESCE(NULLIF(ec_order_product.product_image, ""), ec_products.image) as product_image'),
-                'ec_order_product.price',
-                'ec_order_product.qty',
-                'ec_order_product.total_amount',
-                'ec_order_product.discount_percent',
-                'ec_order_product.discount_amount',
-                'ec_order_product.net_amount',
-                'ec_order_product.tax_amount',
-                'ec_order_product.gross_amount',
-                'ec_order_product.is_gift'
-            )
-            ->get();
+        $order_products = OrderProduct::select('id', 'product_name', 'product_image', 'price', 'qty', 'total_amount', 'discount_percent', 'discount_amount', 'net_amount', 'tax_amount', 'gross_amount', 'is_gift')->where('order_id', $request->input('order_id'))->get();
 
         if($order_products->isEmpty()) {
             return response()->json(['message' => 'Order Products Not Found']);
