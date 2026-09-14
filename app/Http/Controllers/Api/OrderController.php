@@ -3117,8 +3117,14 @@ class OrderController extends Controller
         }
 
         if ($request->filled('status')) {
-            $filteredQuery->where('ec_orders.status', 'like', '%' . $request->status . '%');
-            $dataQuery->where('ec_orders.status', 'like', '%' . $request->status . '%');
+            $statuses = array_filter(array_map('trim', explode(',', $request->status)));
+            if (count($statuses) > 1) {
+                $filteredQuery->whereIn('ec_orders.status', $statuses);
+                $dataQuery->whereIn('ec_orders.status', $statuses);
+            } elseif (count($statuses) === 1) {
+                $filteredQuery->where('ec_orders.status', 'like', '%' . $statuses[0] . '%');
+                $dataQuery->where('ec_orders.status', 'like', '%' . $statuses[0] . '%');
+            }
         }
 
         if ($request->filled('created_at')) {
@@ -3173,9 +3179,17 @@ class OrderController extends Controller
             ->take($pageSize)
             ->get();
 
-        // Add link column
-        $orders->transform(function ($order) {
+        // Eager load order products for preview thumbnails
+        $orderIds = $orders->pluck('id')->toArray();
+        $productsByOrder = OrderProduct::whereIn('order_id', $orderIds)
+            ->select('id', 'order_id', 'product_id', 'product_name', 'product_image', 'price', 'qty', 'gross_amount', 'is_gift')
+            ->get()
+            ->groupBy('order_id');
+
+        // Add link and products
+        $orders->transform(function ($order) use ($productsByOrder) {
             $order->link = '/order-tracking';
+            $order->products = $productsByOrder->get($order->id, collect())->values();
             return $order;
         });
 
