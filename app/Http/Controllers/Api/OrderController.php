@@ -36,7 +36,10 @@ class OrderController extends Controller
     public function storeOrder(Request $request, CreatePaymentForOrderService $createPaymentForOrderService) {
         // echo "<pre>";print_r($request->all());die;
         $validator = Validator::make($request->all(), [
-            'products'      => 'required'
+            'products'          => 'required',
+            'payment_method'    => 'required|string',
+        ], [
+            'payment_method.required' => 'Please choose a payment option to continue.',
         ]);
 
         if ($validator->fails()) {
