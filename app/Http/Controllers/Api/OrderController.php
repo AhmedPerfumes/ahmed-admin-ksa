@@ -3132,10 +3132,34 @@ class OrderController extends Controller
         }
 
         // Sorting
-        $orderBy = $request->input('orderBy', 'ec_orders.id');
-        $orderDir = $request->input('orderDir', 'desc');
-        if (in_array($orderBy, $columns)) {
-            $dataQuery->orderBy($orderBy, $orderDir);
+        $columnMap = [
+            'id'                       => 'ec_orders.id',
+            'ec_orders.id'             => 'ec_orders.id',
+            'code'                     => 'ec_orders.code',
+            'ec_orders.code'           => 'ec_orders.code',
+            'created_at'               => 'ec_orders.created_at',
+            'ec_orders.created_at'     => 'ec_orders.created_at',
+            'status'                   => 'ec_orders.status',
+            'ec_orders.status'         => 'ec_orders.status',
+            'amount'                   => 'ec_orders.amount',
+            'ec_orders.amount'         => 'ec_orders.amount',
+            'tax_amount'               => 'ec_orders.tax_amount',
+            'ec_orders.tax_amount'     => 'ec_orders.tax_amount',
+            'sub_total'                => 'ec_orders.sub_total',
+            'ec_orders.sub_total'      => 'ec_orders.sub_total',
+            'coupon_code'              => 'ec_orders.coupon_code',
+            'ec_orders.coupon_code'    => 'ec_orders.coupon_code',
+            'payment_channel'          => 'payments.payment_channel',
+            'payments.payment_channel' => 'payments.payment_channel',
+        ];
+
+        $rawOrderBy = $request->input('orderBy', 'ec_orders.id');
+        $orderBy = $columnMap[$rawOrderBy] ?? 'ec_orders.id';
+        $orderDir = strtolower($request->input('orderDir', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $dataQuery->orderBy($orderBy, $orderDir);
+        if ($orderBy !== 'ec_orders.id') {
+            $dataQuery->orderBy('ec_orders.id', $orderDir);
         }
 
         // Pagination
