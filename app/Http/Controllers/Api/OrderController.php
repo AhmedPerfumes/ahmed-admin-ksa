@@ -3287,7 +3287,10 @@ class OrderController extends Controller
         $reason = $request->input('reason', '');
         $reasonDescription = $request->input('reason_description', '');
 
-        $order = Order::where('id', $orderId)
+        $order = Order::where(function ($query) use ($orderId) {
+                $query->where('id', $orderId)
+                      ->orWhere('code', $orderId);
+            })
             ->where('user_id', $customerId)
             ->with(['address', 'products.product'])
             ->first();
@@ -3299,17 +3302,19 @@ class OrderController extends Controller
             ], 404);
         }
 
-        if ($order->status == OrderStatusEnum::CANCELED || $order->status === 'cancelled') {
+        $currentStatus = strtolower(is_object($order->status) ? ($order->status->getValue() ?? '') : (string) $order->status);
+
+        if (in_array($currentStatus, ['canceled', 'cancelled'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Order is already cancelled'
             ], 400);
         }
 
-        if ($order->status == OrderStatusEnum::COMPLETED || $order->status === 'completed') {
+        if (in_array($currentStatus, ['completed', 'shipped', 'delivered', 'returned'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Completed orders cannot be cancelled'
+                'message' => 'Orders that are already ' . $currentStatus . ' cannot be cancelled online.'
             ], 400);
         }
 
