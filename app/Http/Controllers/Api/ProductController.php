@@ -2120,12 +2120,24 @@ class ProductController extends Controller
     {
         try {
             $now = \Carbon\Carbon::now();
+            $productLimit = (int) $request->input('limit', 8);
+            $type = $request->input('type'); // Optional filter by promotion type (e.g. 'discount', 'buy_x_get_y')
+            $promoLimit = (int) $request->input('promo_limit', 0); // Optional filter for number of promotions
 
             // Fetch active promotions that have not been deleted and are currently active
-            $activePromotions = Promotion::where('isDeleted', false)
+            $query = Promotion::where('isDeleted', false)
                 ->where('start_date', '<=', $now)
-                ->where('end_date', '>=', $now)
-                ->with([
+                ->where('end_date', '>=', $now);
+
+            if (!empty($type)) {
+                $query->where('type', $type);
+            }
+
+            if ($promoLimit > 0) {
+                $query->limit($promoLimit);
+            }
+
+            $activePromotions = $query->with([
                     'discountRules.individualRules',
                     'discountRules.products',
                     'buyXGetYRules.products',
@@ -2161,7 +2173,11 @@ class ProductController extends Controller
                                 }
                             } elseif ($rule->apply_to === 'all') {
                                 $groupPercentage = $rule->percentage;
-                                $allIds = DB::table('ec_products')->where('status', 'published')->pluck('id')->toArray();
+                                $allQuery = DB::table('ec_products')->where('status', 'published');
+                                if ($productLimit > 0) {
+                                    $allQuery->limit($productLimit);
+                                }
+                                $allIds = $allQuery->pluck('id')->toArray();
                                 $productIds = array_merge($productIds, $allIds);
                             }
                         }
@@ -2170,6 +2186,10 @@ class ProductController extends Controller
                     $productIds = array_values(array_unique(array_filter($productIds)));
                     if (empty($productIds)) {
                         continue;
+                    }
+
+                    if ($productLimit > 0) {
+                        $productIds = array_slice($productIds, 0, $productLimit);
                     }
 
                     $products = $this->fetchProductsWithDetails($productIds);
@@ -2244,6 +2264,10 @@ class ProductController extends Controller
                     $allBogoProductIds = array_values(array_unique(array_filter(array_merge($buyProductIds, $freeProductIds))));
                     if (empty($allBogoProductIds)) {
                         continue;
+                    }
+
+                    if ($productLimit > 0) {
+                        $allBogoProductIds = array_slice($allBogoProductIds, 0, $productLimit);
                     }
 
                     $bogoProducts = $this->fetchProductsWithDetails($allBogoProductIds);
