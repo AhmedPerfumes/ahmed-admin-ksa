@@ -2124,39 +2124,29 @@ class ProductController extends Controller
             $type = $request->input('type'); // Optional filter by promotion type (e.g. 'discount', 'buy_x_get_y')
             $promoLimit = (int) $request->input('promo_limit', 0); // Optional filter for number of promotions
 
-            // Fetch active promotions that have not been deleted and are currently active
-            $query = Promotion::where('isDeleted', false)
-                ->where('start_date', '<=', $now)
-                ->where('end_date', '>=', $now);
-
-            if (!empty($type)) {
-                $query->where('type', $type);
-            }
-
-            if ($promoLimit > 0) {
-                $query->limit($promoLimit);
-            }
-
-            $activePromotions = $query->with([
-                    'discountRules.individualRules',
-                    'discountRules.products',
-                    'buyXGetYRules.products',
-                    'focRules.products',
-                ])
-                ->orderBy('start_date', 'desc')
-                ->get();
-
             $discountPromotions = [];
             $buyXGetYPromotions = [];
 
-            foreach ($activePromotions as $promotion) {
-                if ($promotion->type === 'discount') {
+            // 1. Fetch only the first created active discount promotion
+            if (empty($type) || $type === 'discount') {
+                $firstDiscountPromo = Promotion::where('isDeleted', false)
+                    ->where('type', 'discount')
+                    ->where('start_date', '<=', $now)
+                    ->where('end_date', '>=', $now)
+                    ->with([
+                        'discountRules.individualRules',
+                        'discountRules.products',
+                    ])
+                    ->orderBy('id', 'asc')
+                    ->first();
+
+                if ($firstDiscountPromo) {
                     $productIds = [];
                     $individualDiscountMap = [];
                     $groupPercentage = null;
 
-                    if ($promotion->discountRules) {
-                        foreach ($promotion->discountRules as $rule) {
+                    if ($firstDiscountPromo->discountRules) {
+                        foreach ($firstDiscountPromo->discountRules as $rule) {
                             if ($rule->apply_to === 'individual') {
                                 if ($rule->individualRules) {
                                     foreach ($rule->individualRules as $ind) {
@@ -2184,62 +2174,78 @@ class ProductController extends Controller
                     }
 
                     $productIds = array_values(array_unique(array_filter($productIds)));
-                    if (empty($productIds)) {
-                        continue;
-                    }
-
-                    if ($productLimit > 0) {
-                        $productIds = array_slice($productIds, 0, $productLimit);
-                    }
-
-                    $products = $this->fetchProductsWithDetails($productIds);
-
-                    $promoProducts = [];
-                    foreach ($products as $val) {
-                        $discountObj = null;
-                        if (isset($individualDiscountMap[$val->product_id])) {
-                            $ind = $individualDiscountMap[$val->product_id];
-                            $discountObj = (object) [
-                                'value' => (int) $ind->value,
-                                'discount_type' => $ind->discount_type,
-                                'final_price' => $ind->final_price ? (float) $ind->final_price : null,
-                                'product_price' => $ind->product_price ? (float) $ind->product_price : (float) $val->price,
-                                'discount_amount' => $ind->discount_amount ? (float) $ind->discount_amount : null,
-                                'start_date' => $promotion->start_date ? $promotion->start_date->format('Y-m-d H:i:s') : null,
-                                'end_date' => $promotion->end_date ? $promotion->end_date->format('Y-m-d H:i:s') : null,
-                            ];
-                        } elseif ($groupPercentage !== null) {
-                            $pct = (float) $groupPercentage;
-                            $basePrice = (float) $val->price;
-                            $finalPrice = round($basePrice - ($basePrice * $pct / 100), 2);
-                            $discountAmount = round($basePrice * $pct / 100, 2);
-                            $discountObj = (object) [
-                                'value' => (int) $pct,
-                                'discount_type' => 'percent',
-                                'final_price' => $finalPrice,
-                                'product_price' => $basePrice,
-                                'discount_amount' => $discountAmount,
-                                'start_date' => $promotion->start_date ? $promotion->start_date->format('Y-m-d H:i:s') : null,
-                                'end_date' => $promotion->end_date ? $promotion->end_date->format('Y-m-d H:i:s') : null,
-                            ];
+                    if (!empty($productIds)) {
+                        if ($productLimit > 0) {
+                            $productIds = array_slice($productIds, 0, $productLimit);
                         }
 
-                        $val->discount = $discountObj;
-                        $promoProducts[] = $val;
-                    }
+                        $products = $this->fetchProductsWithDetails($productIds);
 
-                    if (!empty($promoProducts)) {
-                        $discountPromotions[] = [
-                            'id' => $promotion->id,
-                            'name' => $promotion->name,
-                            'type' => 'discount',
-                            'description' => $promotion->description,
-                            'start_date' => $promotion->start_date ? $promotion->start_date->format('Y-m-d H:i:s') : null,
-                            'end_date' => $promotion->end_date ? $promotion->end_date->format('Y-m-d H:i:s') : null,
-                            'products' => $promoProducts,
-                        ];
+                        $promoProducts = [];
+                        foreach ($products as $val) {
+                            $discountObj = null;
+                            if (isset($individualDiscountMap[$val->product_id])) {
+                                $ind = $individualDiscountMap[$val->product_id];
+                                $discountObj = (object) [
+                                    'value' => (int) $ind->value,
+                                    'discount_type' => $ind->discount_type,
+                                    'final_price' => $ind->final_price ? (float) $ind->final_price : null,
+                                    'product_price' => $ind->product_price ? (float) $ind->product_price : (float) $val->price,
+                                    'discount_amount' => $ind->discount_amount ? (float) $ind->discount_amount : null,
+                                    'start_date' => $firstDiscountPromo->start_date ? $firstDiscountPromo->start_date->format('Y-m-d H:i:s') : null,
+                                    'end_date' => $firstDiscountPromo->end_date ? $firstDiscountPromo->end_date->format('Y-m-d H:i:s') : null,
+                                ];
+                            } elseif ($groupPercentage !== null) {
+                                $pct = (float) $groupPercentage;
+                                $basePrice = (float) $val->price;
+                                $finalPrice = round($basePrice - ($basePrice * $pct / 100), 2);
+                                $discountAmount = round($basePrice * $pct / 100, 2);
+                                $discountObj = (object) [
+                                    'value' => (int) $pct,
+                                    'discount_type' => 'percent',
+                                    'final_price' => $finalPrice,
+                                    'product_price' => $basePrice,
+                                    'discount_amount' => $discountAmount,
+                                    'start_date' => $firstDiscountPromo->start_date ? $firstDiscountPromo->start_date->format('Y-m-d H:i:s') : null,
+                                    'end_date' => $firstDiscountPromo->end_date ? $firstDiscountPromo->end_date->format('Y-m-d H:i:s') : null,
+                                ];
+                            }
+
+                            $val->discount = $discountObj;
+                            $promoProducts[] = $val;
+                        }
+
+                        if (!empty($promoProducts)) {
+                            $discountPromotions[] = [
+                                'id' => $firstDiscountPromo->id,
+                                'name' => $firstDiscountPromo->name,
+                                'type' => 'discount',
+                                'description' => $firstDiscountPromo->description,
+                                'start_date' => $firstDiscountPromo->start_date ? $firstDiscountPromo->start_date->format('Y-m-d H:i:s') : null,
+                                'end_date' => $firstDiscountPromo->end_date ? $firstDiscountPromo->end_date->format('Y-m-d H:i:s') : null,
+                                'products' => $promoProducts,
+                            ];
+                        }
                     }
-                } elseif ($promotion->type === 'buy_x_get_y' || $promotion->type === 'bogo') {
+                }
+            }
+
+            // 2. Fetch Buy X Get Y / Bogo promotions if requested
+            if (empty($type) || in_array($type, ['buy_x_get_y', 'bogo'])) {
+                $bogoQuery = Promotion::where('isDeleted', false)
+                    ->whereIn('type', ['buy_x_get_y', 'bogo'])
+                    ->where('start_date', '<=', $now)
+                    ->where('end_date', '>=', $now);
+
+                if ($promoLimit > 0) {
+                    $bogoQuery->limit($promoLimit);
+                }
+
+                $bogoPromotions = $bogoQuery->with(['buyXGetYRules.products'])
+                    ->orderBy('start_date', 'desc')
+                    ->get();
+
+                foreach ($bogoPromotions as $promotion) {
                     $buyQty = 1;
                     $getQty = 1;
                     $buyProductIds = [];
