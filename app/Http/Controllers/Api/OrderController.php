@@ -326,6 +326,9 @@ class OrderController extends Controller
                     'city' => $request->input('billingAddress.province'),
                     'country' => $request->input('billingAddress.country'),
                     'address' => $request->input('billingAddress.area').' '.$request->input('billingAddress.building'),
+                    'area' => $request->input('billingAddress.building_name', $request->input('billingAddress.building_no', $request->input('billingAddress.building', ''))),
+                    'short_national_address' => $request->input('billingAddress.short_national_address'),
+                    'zip_code' => $request->input('billingAddress.postalCode', $request->input('billingAddress.zip_code')),
                     'customer_id' => $customer->id,
                 ]);
 
@@ -363,6 +366,9 @@ class OrderController extends Controller
                         'city' => $request->input('billingAddress.province'),
                         'country' => $request->input('billingAddress.country'),
                         'address' => $request->input('billingAddress.area').' '.$request->input('billingAddress.building'),
+                        'area' => $request->input('billingAddress.building_name', $request->input('billingAddress.building_no', $request->input('billingAddress.building', ''))),
+                        'short_national_address' => $request->input('billingAddress.short_national_address'),
+                        'zip_code' => $request->input('billingAddress.postalCode', $request->input('billingAddress.zip_code')),
                         'customer_id' => $exisCustomer->id,
                     ]);
                 }
@@ -456,6 +462,9 @@ class OrderController extends Controller
                         'city' => $request->input('billingAddress.province'),
                         'country' => $request->input('billingAddress.country'),
                         'address' => $request->input('billingAddress.area').' '.$request->input('billingAddress.building'),
+                        'area' => $request->input('billingAddress.building_name', $request->input('billingAddress.building_no', $request->input('billingAddress.area', ''))),
+                        'short_national_address' => $request->input('billingAddress.short_national_address', ''),
+                        'zip_code' => $request->input('billingAddress.postalCode', $request->input('billingAddress.zip_code', '')),
                         'customer_id' => $loggedInCustomer->id,
                     ]);
                     $loggedInCustomerAdd = Address::where('customer_id', $loggedInCustomer->id)->first();
@@ -468,6 +477,9 @@ class OrderController extends Controller
                     'city' => $request->input('shippingAddress.province') ? $request->input('shippingAddress.province') : $loggedInCustomerAdd->city,
                     'country' => $request->input('shippingAddress.country') ? $request->input('shippingAddress.country') : $loggedInCustomerAdd->country,
                     'address' => $request->input('shippingAddress.area') ? $request->input('shippingAddress.area').' '.$request->input('shippingAddress.building') : $loggedInCustomerAdd->address,
+                    'area' => $request->input('shippingAddress.building_name', $request->input('shippingAddress.building_no', $request->input('billingAddress.building_name', $request->input('billingAddress.building_no', '')))),
+                    'short_national_address' => $request->input('shippingAddress.short_national_address', $request->input('billingAddress.short_national_address', '')),
+                    'zip_code' => $request->input('shippingAddress.postalCode', $request->input('billingAddress.postalCode', '')),
                     'order_id' => $order->id,
                     'type' => $request->input('shippingAddress.first_name') ? 'shipping_address' : 'billing_address',
                 ]);
@@ -543,6 +555,9 @@ class OrderController extends Controller
                     // 'zip_code' => $request->input('shippingAddress.zip_code'),
                     'country' => $request->input('shippingAddress.country') ? $request->input('shippingAddress.country') : $request->input('billingAddress.country'),
                     'address' => $request->input('shippingAddress.area') ? $request->input('shippingAddress.area').' '.$request->input('shippingAddress.building') : $request->input('billingAddress.area').' '.$request->input('billingAddress.building'),
+                    'area' => $request->input('shippingAddress.building_name', $request->input('shippingAddress.building_no', $request->input('billingAddress.building_name', $request->input('billingAddress.building_no', '')))),
+                    'short_national_address' => $request->input('shippingAddress.short_national_address', $request->input('billingAddress.short_national_address', '')),
+                    'zip_code' => $request->input('shippingAddress.postalCode', $request->input('billingAddress.postalCode', '')),
                     'order_id' => $order->id,
                     'type' => $request->input('shippingAddress.first_name') ? 'shipping_address' : 'billing_address',
                 ]);
@@ -2542,7 +2557,7 @@ class OrderController extends Controller
             // Execute the request
             $response = curl_exec($ch);
 
-            // Check for errors
+               // Check for errors
             if (curl_errno($ch)) {
                 // echo 'order_approved Curl error: ' . curl_error($ch);
                 \Log::info('Order Get Error:', ['error' => curl_error($ch)]);exit();
@@ -3028,9 +3043,12 @@ class OrderController extends Controller
                 'name'      => $request->input('name'),
                 'email'     => $request->input('email'),
                 'phone'     => $request->input('mobile'),
-                'state' => $request->input('state'),
-                'city' => $request->input('city'),
-                'address' => $request->input('address'),
+                'state'     => $request->input('state'),
+                'city'      => $request->input('city'),
+                'address'   => $request->input('address'),
+                'area'      => $request->input('building', $request->input('area')), // Use area column to save Building data
+                'short_national_address' => $request->input('short_national_address'),
+                'zip_code'  => $request->input('zip_code', $request->input('postalCode')),
                 'customer_id' => $request->input('customer_id'),
                 'is_default' => $request->input('is_default')
             ]);
@@ -3046,6 +3064,8 @@ class OrderController extends Controller
             'state' => 'required',
             'city' => 'required',
             'address' => 'required',
+            'building' => 'nullable|string',
+            'area' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -3061,6 +3081,15 @@ class OrderController extends Controller
         $address->state = $request->input('state');
         $address->city = $request->input('city');
         $address->address = $request->input('address');
+        if ($request->has('building') || $request->has('area')) {
+            $address->area = $request->input('building', $request->input('area')); // Use area column to save Building data
+        }
+        if ($request->has('short_national_address')) {
+            $address->short_national_address = $request->input('short_national_address');
+        }
+        if ($request->has('zip_code') || $request->has('postalCode')) {
+            $address->zip_code = $request->input('zip_code', $request->input('postalCode'));
+        }
         $address->is_default = $request->input('is_default');
         $address->save();
 

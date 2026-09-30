@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\TabbyCronController;
 use App\Http\Controllers\Api\ProductReviewController as ApiProductReviewController;
+use App\Http\Controllers\Api\SaudiAddressController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -57,6 +58,7 @@ Route::middleware('customLogs')->group(function () {
     Route::withoutMiddleware('customLogs')->post('/allProducts', [ProductController::class, 'getAllProducts']);
     Route::withoutMiddleware('customLogs')->post('/exportProducts', [ProductController::class, 'getExportProducts']);
     Route::withoutMiddleware('customLogs')->post('/productSEO', [ProductController::class, 'getProductSEO']);
+    Route::withoutMiddleware('customLogs')->match(['get', 'post'], '/staticPageSEO', [\Botble\StaticPageSeo\Http\Controllers\Api\StaticPageSeoApiController::class, 'getStaticPageSEO']);
 
     // Order Routes
     Route::post('/storeOrder', [OrderController::class, 'storeOrder']);
@@ -88,6 +90,8 @@ Route::middleware('customLogs')->group(function () {
     Route::post('/customerCancelOrder', [OrderController::class, 'customerCancelOrder']);
     Route::post('/customerCouponDetails', [OrderController::class, 'customerCouponDetails']);
     Route::post('/customerPasswordCheck', [OrderController::class, 'customerPasswordCheck']);
+    Route::post('/address/lookup', [SaudiAddressController::class, 'lookup']);
+    Route::get('/address/search', [SaudiAddressController::class, 'search']);
 
     Route::withoutMiddleware('restrict.domains')->post('/tamaraPaymentResponse', [OrderController::class, 'tamaraPaymentResponse']);
     Route::withoutMiddleware('restrict.domains')->any('/tamaraPaymentWebhook', [OrderController::class, 'tamaraPaymentWebhook']);

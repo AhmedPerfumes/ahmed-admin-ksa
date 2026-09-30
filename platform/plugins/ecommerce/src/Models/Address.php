@@ -19,6 +19,8 @@ class Address extends BaseModel
         'state',
         'city',
         'address',
+        'area',
+        'short_national_address',
         'zip_code',
         'customer_id',
         'is_default',
