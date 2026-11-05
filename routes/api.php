@@ -33,7 +33,7 @@ Route::middleware('customLogs')->group(function () {
 
     Route::get('/customer', [AuthController::class, 'getCustomer']);
 
-    Route::post('/submitReview', [AuthController::class, 'submitReview']);
+    Route::withoutMiddleware('customLogs')->post('/submitReview', [AuthController::class, 'submitReview']);
 
     Route::get('/freeGiftProducts', [ProductController::class, 'freeGiftProducts']);
 

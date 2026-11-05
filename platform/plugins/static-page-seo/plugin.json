@@ -1,0 +1,10 @@
+{
+    "id": "botble/static-page-seo",
+    "name": "Static Page SEO",
+    "namespace": "Botble\\StaticPageSeo\\",
+    "provider": "Botble\\StaticPageSeo\\Providers\\StaticPageSeoServiceProvider",
+    "author": "Ahmed Perfumes",
+    "url": "https://ahmed.com",
+    "version": "1.0.0",
+    "description": "Manage SEO meta tags for static pages (Homepage, About Us, Contact Us, etc.)"
+}

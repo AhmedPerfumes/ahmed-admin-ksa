@@ -14,6 +14,12 @@
 @if ($address->address)
     <dd>{!! BaseHelper::clean($address->address) !!}</dd>
 @endif
+@if ($address->building_name || $address->area)
+    <dd>🏢 {{ $address->building_name ?: $address->area }}</dd>
+@endif
+@if ($address->short_national_address)
+    <dd>📍 {{ $address->short_national_address }}</dd>
+@endif
 @if ($address->city)
     <dd>{{ $address->city_name }}</dd>
 @endif

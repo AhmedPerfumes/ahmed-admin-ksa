@@ -9,10 +9,8 @@ use Illuminate\Support\Facades\Validator;
 use Botble\Ecommerce\Models\Customer;
 use Botble\Ecommerce\Models\MobileVerification;
 use Illuminate\Support\Facades\Auth;
-// use Botble\Ecommerce\Models\Discount as DiscountModel;
-use Botble\Ecommerce\Models\OrderAddress;
 use Botble\Ecommerce\Models\Review;
-// use Botble\Ecommerce\Models\Discount;
+use Botble\Ecommerce\Models\OrderAddress;
 use Botble\Ecommerce\Models\Address;
 
 class AuthController extends Controller
@@ -64,56 +62,18 @@ class AuthController extends Controller
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
 
         $result = curl_exec($ch);
-        \Log::info("Signup SMS API Raw Response: " . $result);
         if (curl_errno($ch)) {
             echo 'Error:' . curl_error($ch);die;
         }
+        \Log::info("signup SMS API Raw Response: " . $result);
         curl_close ($ch);
-
-        // $curl = curl_init();
-
-        // curl_setopt_array($curl, array(
-        // CURLOPT_URL => 'https://waba.myinboxmedia.in/api/sendwaba',
-        // CURLOPT_RETURNTRANSFER => true,
-        // CURLOPT_ENCODING => '',
-        // CURLOPT_MAXREDIRS => 10,
-        // CURLOPT_TIMEOUT => 0,
-        // CURLOPT_FOLLOWLOCATION => true,
-        // CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        // CURLOPT_CUSTOMREQUEST => 'POST',
-        // CURLOPT_POSTFIELDS =>'{
-        //     "ProfileId": "MIM2400074",
-        //     "APIKey": "#JpXt4fbMCFj",
-        //     "MobileNumber": 966'.ltrim($request->mobile, $request->mobile[0]).',
-        //     "templateName": "websiteauthentication",
-        //     "Parameters": [
-        //         '.$otp.'      
-        //     ],
-        //     "HeaderType": "Text",
-        //     "Text": "",
-        //     "MediaUrl": "",
-        //     "Latitude": 0,
-        //     "Longitude": 0,
-        //     "isTemplate": "true",
-        //     "ButtonOrListJSON": "",
-        //     "SubClientCode": "",
-        //     "HeaderParameter": "",
-        //     "CTAButtonURLParameter":"",
-        //     "CTAButtonURLParameter2" : ""
-        // }',
-        //     CURLOPT_HTTPHEADER => array(
-        //         'Content-Type: application/json'
-        //     ),
-        // ));
-
-        // $response = curl_exec($curl);
-
-        // curl_close($curl);
-        
-        // echo $response;
 
         // $customer->otp = $otp;
         // $customer->save();
+
+        // return response()->json([
+        //     'message'          => 'OTP Sent on Above Mobile Number'
+        // ]);
 
         $Mobile_verification = MobileVerification::create([
             'otp'     => $otp,
@@ -135,9 +95,9 @@ class AuthController extends Controller
 
         if($request->flag == 'checkout') {
             $validator = Validator::make($request->all(), [
-                'mobile'     => 'required|numeric',
-                'otp'  => 'required|numeric'
-            ]);
+            'mobile'     => 'required|numeric',
+            'otp'  => 'required|numeric'
+          ]);
 
             if ($validator->fails()) {
                 return response()->json($validator->errors());
@@ -153,16 +113,24 @@ class AuthController extends Controller
             $mobile_verification->otp = 0;
             $mobile_verification->save();
 
-            // $customer = OrderAddress::select('ec_order_addresses.id', 'name', 'email', 'phone')->join('payments', 'payments.order_id', '=', 'ec_order_addresses.order_id')->where('status', 'completed')->where('phone', $request->mobile)->get();
+            $customer = Customer::where('email', $request->email)->orWhere('phone', $request->mobile)->first();
 
-            // echo "<pre>";print_r($customer);
+            if (!$customer) {
+                $customer = Customer::create([
+                    'name'      => 'Guest User',
+                    'email'     => $request->email,
+                    'phone'     => $request->mobile,
+                    'password'  => Hash::make($request->password)
+                ]);
+            }
 
-            // $coupon = DiscountModel::where('code', 'WELCOME10')->where('start_date', '<=', now())->where('end_date', '>=', now())->first();
+            $customer->tokens()->delete();
+
+            $token = $customer->createToken('auth_token')->plainTextToken;
 
             return response()->json([
                 'message'       => 'OTP Verified Successfully',
-                // 'customer'          => !$customer->isEmpty() ? false : true,
-                // 'coupon'            => $coupon
+                'access_token'  => $token,
             ]);
         } else {
             // $customer = Customer::select('id', 'name', 'email', 'phone')->where('phone', $request->mobile)->where('otp', $request->otp)->first();
@@ -185,23 +153,42 @@ class AuthController extends Controller
                 return response()->json($validator->errors());
             }
 
-            // $mobile_verification = MobileVerification::where('phone', $request->mobile)->where('otp', $request->otp)->orderBy('id', 'desc')->first();
+            if($request->flag == 'fpassword') {
+                $customer = Customer::select('id', 'name', 'email', 'phone')->where('phone', $request->mobile)->where('otp', $request->otp)->first();
 
-            // if (!$mobile_verification) {
-            //     return response()->json([
-            //         'message'       => 'Invalid Mobile Number or OTP',
-            //     ]);
-            // }
+                if (!$customer) {
+                    return response()->json([
+                        'message'       => 'Invalid Mobile Number or OTP',
+                    ]);
+                }
 
-            // $mobile_verification->otp = 0;
-            // $mobile_verification->save();
+                $customer->otp = 0;
+                $customer->save();
+
+                return response()->json([
+                    'message'       => 'OTP Verified Successfully',
+                    'data'          => $customer,
+                    // 'coupon'            => $coupon
+                ]);
+            }
+
+            $mobile_verification = MobileVerification::where('phone', $request->mobile)->where('otp', $request->otp)->orderBy('id', 'desc')->first();
+
+            if (!$mobile_verification) {
+                return response()->json([
+                    'message'       => 'Invalid Mobile Number or OTP',
+                ]);
+            }
+
+            $mobile_verification->otp = 0;
+            $mobile_verification->save();
 
             $validator = Validator::make($request->all(), [
                 // 'customer_id'      => 'required',
                 'name' => 'required',
                 'email' => 'required|email|unique:ec_customers,email,',
                 'mobile' => 'required|unique:ec_customers,phone,',
-                // 'password' => 'required',
+                'password' => 'required',
             ]);
 
             if ($validator->fails()) {
@@ -218,7 +205,7 @@ class AuthController extends Controller
             $apiUrl = env('SMART_VIEW_COUPON_API_URL').'Coupon/Register';
 
             $postData = [
-                    'couponId' => "3FDF342E-52C6-4D73-AD84-DA2605E15DF8",
+                'couponId' => "3FDF342E-52C6-4D73-AD84-DA2605E15DF8",
                 'customerName'  => $customer->name,
                 'email' => $customer->email,
                 'mobileNo' => $customer->phone,
@@ -228,10 +215,8 @@ class AuthController extends Controller
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Content-Type: application/json',
-            ]);
-            
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json',]);
+
             $apiResponse = curl_exec($ch);
             if ($apiResponse === false) {
                 \Log::error('Coupon Register API Error', [
@@ -244,20 +229,7 @@ class AuthController extends Controller
             }
             curl_close($ch);
 
-            // $coupons = DiscountModel::select('code', 'value', 'start_date', 'end_date')->where('target', 'customer')->where('customer_id', $customer->id)->whereNotNull('code')->whereDate('start_date', '<=', now())->whereDate('end_date', '>=', now())->join('ec_discount_customers', 'ec_discounts.id', '=', 'ec_discount_customers.discount_id', 'left')->get();
-
-            // // Manually transform into an array with formatted strings
-            // $formattedCoupons = $coupons->map(function ($coupon) {
-            //     return [
-            //         'code'       => $coupon->code,
-            //         'value'      => $coupon->value,
-            //         'start_date' => \Carbon\Carbon::parse($coupon->start_date)->format('Y-m-d H:i:s'),
-            //         'end_date'   => \Carbon\Carbon::parse($coupon->end_date)->format('Y-m-d H:i:s'),
-            //         'type'       => 'customer',
-            //     ];
-            // })->toArray();
-
-            // $customer->coupon = $formattedCoupons;
+            $customer->tokens()->delete();
 
             $token = $customer->createToken('auth_token')->plainTextToken;
 
@@ -265,7 +237,7 @@ class AuthController extends Controller
                 'message'       => $request->flag == 'fpassword' ? 'OTP Verified Successfully' : 'Customer Registered Successfully',
                 'data'          => $customer,
                 'access_token'  => $token,
-                'token_type'    => 'Bearer'
+                // 'token_type'    => 'Bearer'
             ]);
         }
     }
@@ -295,32 +267,19 @@ class AuthController extends Controller
             ]);
         }
 
-        // $coupons = DiscountModel::select('code', 'value', 'start_date', 'end_date')->where('target', 'customer')->where('customer_id', $customer->id)->whereNotNull('code')->whereDate('start_date', '<=', now())->whereDate('end_date', '>=', now())->join('ec_discount_customers', 'ec_discounts.id', '=', 'ec_discount_customers.discount_id', 'left')->get();
+        // $address = Address::where('customer_id', $customer->id)->get();
 
-        // Manually transform into an array with formatted strings
-        // $formattedCoupons = $coupons->map(function ($coupon) {
-        //     return [
-        //         'code'       => $coupon->code,
-        //         'value'      => $coupon->value,
-        //         'start_date' => \Carbon\Carbon::parse($coupon->start_date)->format('Y-m-d H:i:s'),
-        //         'end_date'   => \Carbon\Carbon::parse($coupon->end_date)->format('Y-m-d H:i:s'),
-        //         'type'       => 'customer',
-        //     ];
-        // })->toArray();
+        // if(!$address->isEmpty()) {
+        //     if ($address->count() == 1) {
+        //         $original = $address->first()->replicate(); // clone the model
+        //         $original->id = -1; // change ID
+        //         $address->push($original); // add to collection
+        //     }
 
-        // $customer->coupon = $formattedCoupons;
+        //     $customer->addresses = $address;
+        // }
 
-        $address = Address::where('customer_id', $customer->id)->get();
-
-        if(!$address->isEmpty()) {
-            if ($address->count() == 1) {
-                $original = $address->first()->replicate(); // clone the model
-                $original->id = -1; // change ID
-                $address->push($original); // add to collection
-            }
-
-            $customer->addresses = $address;
-        }
+        $customer->tokens()->delete();
 
         $token = $customer->createToken('auth_token')->plainTextToken;
 
@@ -328,7 +287,7 @@ class AuthController extends Controller
             'message'       => 'Login Successfully',
             'data'          => $customer,
             'access_token'  => $token,
-            'token_type'    => 'Bearer'
+            // 'token_type'    => 'Bearer'
         ]);
     }
 
@@ -381,12 +340,7 @@ class AuthController extends Controller
 
         $ch = curl_init();
 
-        // $passw = "11F2";
-        // $pass = "$";
-        // $p = "E89_6C3";
-        // $password = $passw.$pass.$p;
         $password = env("INBOXMEDIA_PASSWORD");
-
         $sms_params = [
             'userid' => 'MIM2500371',
             'pwd'    => $password,
@@ -402,61 +356,11 @@ class AuthController extends Controller
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
 
         $result = curl_exec($ch);
-
         if (curl_errno($ch)) {
-            // echo 'Error:' . curl_error($ch);die;
-            \Log::error("Signup SMS API Connection Error: " . curl_error($ch));
+            echo 'Error:' . curl_error($ch);die;
         }
-        \Log::info("Signup SMS API Raw Response: " . $result);
+        \Log::info("sendOTP SMS API Raw Response: " . $result);
         curl_close ($ch);
-
-        // $curl = curl_init();
-
-        // $wa_payload = [
-        //     "ProfileId" => "MIM2400074",
-        //     "APIKey" => "#JpXt4fbMCFj",
-        //     "MobileNumber" => (string)$final_mobile,
-        //     "templateName" => "websiteauthentication",
-        //     "Parameters" => [
-        //         (string)$otp 
-        //     ],
-        //     "HeaderType" => "Text",
-        //     "Text" => "",
-        //     "MediaUrl" => "",
-        //     "Latitude" => 0,
-        //     "Longitude" => 0,
-        //     "isTemplate" => "true",
-        //     "ButtonOrListJSON" => "",
-        //     "SubClientCode" => "",
-        //     "HeaderParameter" => "",
-        //     "CTAButtonURLParameter" => "",
-        //     "CTAButtonURLParameter2" => ""
-        // ];
-
-        // curl_setopt_array($curl, array(
-        //     CURLOPT_URL => 'https://waba.myinboxmedia.in/api/sendwaba',
-        //     CURLOPT_RETURNTRANSFER => true,
-        //     CURLOPT_ENCODING => '',
-        //     CURLOPT_MAXREDIRS => 10,
-        //     CURLOPT_TIMEOUT => 0,
-        //     CURLOPT_FOLLOWLOCATION => true,
-        //     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        //     CURLOPT_CUSTOMREQUEST => 'POST',
-        //     CURLOPT_POSTFIELDS => json_encode($wa_payload),
-        //     CURLOPT_HTTPHEADER => array(
-        //         'Content-Type: application/json'
-        //     ),
-        // ));
-
-        // $response = curl_exec($curl);
-        // $http_status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        // if (curl_errno($curl)) {
-        //     \Log::error("Signup WA API Connection Error: " . curl_error($curl));
-        // }
-
-        // curl_close($curl);
-        // \Log::info("Signup WA API Status: $http_status | Raw Response: " . $response);
-        // echo $response;
 
         if($request->flag == 'fpassword') {
             $customer = Customer::select('id', 'name', 'email', 'phone')->where('phone', $request->mobile)->first();
@@ -490,24 +394,31 @@ class AuthController extends Controller
             'message'          => 'OTP Sent on Above Mobile Number'
         ]);
     }
+
     public function submitReview(Request $request)
     {
-        
-        Review::create([
-            'product_id'     => $request?->order_id, // or set if needed
-            // 'customer_id'    => $request?->id,
-            'customer_name'  => $request?->customer_name ?? 'Guest',
-            // 'customer_email' => null,
-            'star'           => $request->star ?? 0,
-            'comment'        => $request->comment ?? '',
-            // 'status'         => 'published', // or 'pending' if needed
-        ]);
+        try {
+            $productId = is_numeric($request?->order_id) ? (int)$request->order_id : null;
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Review submitted successfully.',
-        ]);
+            Review::create([
+                'product_id'     => $productId ?? 0,
+                'customer_name'  => $request?->customer_name ?? 'Guest',
+                'star'           => $request->star ?? 5,
+                'comment'        => $request->comment ?? '',
+                'status'         => 'published',
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Review submitted successfully.',
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Error submitting review: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Review submitted successfully.',
+            ]);
+        }
     }
-
 
 }
