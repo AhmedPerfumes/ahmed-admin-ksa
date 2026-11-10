@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\TabbyCronController;
 use App\Http\Controllers\Api\ProductReviewController as ApiProductReviewController;
 use App\Http\Controllers\Api\SaudiAddressController;
+use App\Http\Controllers\Api\ApplePayController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -68,6 +69,11 @@ Route::middleware('customLogs')->group(function () {
     Route::post('/trackOrder', [OrderController::class, 'trackOrder']);
     Route::post('/orderDetails', [OrderController::class, 'orderDetails']);
     Route::post('/validateCoupon', [OrderController::class, 'validateCoupon']);
+
+    // Direct Apple Pay (PayTabs) — allowlisted customers only, enforced in ApplePayController
+    Route::get('/applePay/config', [ApplePayController::class, 'config']);
+    Route::post('/applePay/validateMerchant', [ApplePayController::class, 'validateMerchant'])->middleware('throttle:20,1');
+    Route::post('/applePay/charge', [ApplePayController::class, 'charge'])->middleware('throttle:10,1');
 
     // Blog Routes
     Route::withoutMiddleware('customLogs')->post('/blogs', [BlogController::class, 'getBlogs']);

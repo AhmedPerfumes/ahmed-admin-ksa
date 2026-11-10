@@ -10,6 +10,21 @@ use Illuminate\Support\Facades\Log;
 class LogRequestsAndResponses
 {
     /**
+     * Request fields that must never reach the logs (payment tokens, secrets).
+     */
+    protected array $redactedFields = ['apple_pay_token', 'password', 'password_confirmation'];
+
+    /**
+     * Headers that carry credentials.
+     */
+    protected array $redactedHeaders = ['authorization', 'cookie', 'x-xsrf-token'];
+
+    /**
+     * Routes whose response body is sensitive (Apple merchant session).
+     */
+    protected array $redactedResponsePaths = ['api/applePay/validateMerchant'];
+
+    /**
      * Handle an incoming request.
      *
      * @return mixed
@@ -20,7 +35,7 @@ class LogRequestsAndResponses
         Log::info('>>Incoming request<<', [
             'method' => $request->method(),
             'url' => $request->fullUrl(),
-            'headers' => $request->headers->all(),
+            'headers' => $this->getHeaders($request),
             'payload' => $this->getPayload($request),
             'ip' => $request->ip(),
             // 'user_agent' => $request->header('User-Agent'),
@@ -33,11 +48,27 @@ class LogRequestsAndResponses
             'status' => $response->status(),
             'headers' => $response->headers->all(),
             'request_id' => $request->header('X-Request-ID'),
-            'body' => $response->original,
+            'body' => $request->is(...$this->redactedResponsePaths) ? '[redacted]' : $response->original,
             'exception' => $response->exception,
         ]);
 
         return $response;
+    }
+
+    /**
+     * Request headers with credentials masked.
+     */
+    protected function getHeaders(Request $request): array
+    {
+        $headers = $request->headers->all();
+
+        foreach ($this->redactedHeaders as $name) {
+            if (isset($headers[$name])) {
+                $headers[$name] = ['[redacted]'];
+            }
+        }
+
+        return $headers;
     }
 
     /**
@@ -51,6 +82,12 @@ class LogRequestsAndResponses
         // if (strlen(json_encode($payload)) > 1000) {
             // return 'Payload too large to log';
         // }
+
+        foreach ($this->redactedFields as $field) {
+            if (array_key_exists($field, $payload)) {
+                $payload[$field] = '[redacted]';
+            }
+        }
 
         return $payload;
     }

@@ -14,6 +14,7 @@ class PaymentMethodEnum extends Enum
     public const BANK_TRANSFER = 'bank_transfer';
     public const PAYFORT = 'payfort';
     public const PAYTABS = 'paytabs';
+    public const APPLEPAY = 'applepay';
     public const TABBY = 'tabby';
     public const TAMARA = 'tamara';
 

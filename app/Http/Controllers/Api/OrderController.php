@@ -48,6 +48,21 @@ class OrderController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
+        // Direct Apple Pay: allowlisted, authenticated customers only. The order is
+        // always bound to the token's customer, never to the body's customer_id.
+        if ($request->input('payment_method') === 'applepay') {
+            if (!$customer) {
+                return response()->json(['message' => 'Unauthorized'], 401);
+            }
+            if (!app(\App\Services\ApplePayService::class)->isEligible($customer)) {
+                return response()->json([
+                    'message' => 'Apple Pay is not available for this account.',
+                    'error'   => 'Apple Pay is not available for this account.',
+                ], 403);
+            }
+            $request->merge(['customer_id' => $customer->getKey()]);
+        }
+
         $validator = Validator::make($request->all(), [
             'products'      => 'required'
         ]);
@@ -623,7 +638,7 @@ class OrderController extends Controller
             'description' => $request->input('note'),
             'is_confirmed' => 1,
             'is_finished' => 1,
-            'status' => ($request->input('payment_method') == 'paytabs' || $request->input('payment_method') == 'tamara' || $request->input('payment_method') == 'tabby') ? OrderStatusEnum::TRASH : OrderStatusEnum::PROCESSING,
+            'status' => ($request->input('payment_method') == 'paytabs' || $request->input('payment_method') == 'tamara' || $request->input('payment_method') == 'tabby' || $request->input('payment_method') == 'applepay') ? OrderStatusEnum::TRASH : OrderStatusEnum::PROCESSING,
             'lang' => $request->input('locale'),
             'sub_total_tax' => isset($without_vat_price) ? ($request->input('totalPrice') / (1 + ($tax->percentage / 100)) * ($tax->percentage / 100)) + ($request->input('shippingPrice') / (1 + ($tax->percentage / 100)) * ($tax->percentage / 100)) + ($request->input('servicePrice') / (1 + ($tax->percentage / 100)) * ($tax->percentage / 100)) + (($without_vat_price / 100) * $tax->percentage) : 0.00,
             'discount_sub_total' => isset($without_vat_price) ? $without_vat_price : 0.00,
@@ -1636,6 +1651,19 @@ class OrderController extends Controller
 
             //     InvoiceItem::query()->create($orderProduct);
             // }
+
+            // Direct Apple Pay: order stays TRASH (unpaid); the frontend now calls
+            // /applePay/charge, which charges the server-side $order->amount.
+            if($request->input('payment_method') == 'applepay') {
+                return response()->json([
+                    'message'          => 'ApplePay order created',
+                    'order_id'         => $order->code,
+                    'payment_method'   => 'applepay',
+                    'total'            => $order->amount,
+                    'sub_total'        => $order->sub_total,
+                    'shipping_amount'  => $order->shipping_amount,
+                ]);
+            }
 
              if($request->input('payment_method') == 'paytabs') {
                 $resp = $this->payTabsPayment($request, $data, $order);
